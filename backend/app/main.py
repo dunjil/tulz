@@ -51,15 +51,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         is_docs_route = request.url.path in ("/docs", "/redoc", "/openapi.json")
         if not is_docs_route:
             # Basic CSP - allow self for frames to support PDF previews
+            # In development, also allow localhost/127.0.0.1 for connect-src to support various dev ports
+            connect_src = "'self'"
+            if not settings.is_production:
+                connect_src += " localhost:* 127.0.0.1:*"
+                
             response.headers["Content-Security-Policy"] = (
-                "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline'; "
-                "style-src 'self' 'unsafe-inline'; "
-                "img-src 'self' data: https:; "
-                "font-src 'self'; "
-                "connect-src 'self'; "
-                "frame-ancestors 'self'; "
-                "object-src 'self'"
+                f"default-src 'self'; "
+                f"script-src 'self' 'unsafe-inline'; "
+                f"style-src 'self' 'unsafe-inline'; "
+                f"img-src 'self' data: https:; "
+                f"font-src 'self'; "
+                f"connect-src {connect_src}; "
+                f"frame-ancestors 'self'; "
+                f"object-src 'self'"
             )
 
         return response
@@ -120,10 +125,21 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS middleware
-print(f"DEBUG: Allowed Origins: {settings.allowed_origins}")
+allowed_origins = list(settings.allowed_origins)
+if not settings.is_production:
+    # Add common development ports if not already present
+    dev_origins = [
+        "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
+        "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002"
+    ]
+    for origin in dev_origins:
+        if origin not in allowed_origins:
+            allowed_origins.append(origin)
+
+print(f"DEBUG: Allowed Origins: {allowed_origins}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
