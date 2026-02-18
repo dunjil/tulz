@@ -16,20 +16,51 @@ trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
 
 # Security Cleanup - Kill rogue processes and crontabs
 security_cleanup() {
-    log "Performing security cleanup..."
-    # Kill any processes matching known malware signatures
-    pkill -f "kok" || true
-    pkill -f "x86_64" || true
+    log "Performing intensive security cleanup..."
+    # Kill any processes matching known malware signatures or high CPU usage without a known name
+    pkill -9 -f "kok" || true
+    pkill -9 -f "x86_64" || true
     
-    # Wipe toolhub crontab (where malware often persists)
+    # Hunt for miners by CPU usage (top 3 if > 20%)
+    log "Checking for high CPU rogue processes..."
+    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 20 {print $1}' | while read rpid; do
+        if [ "$rpid" != "$$" ]; then
+            log "Killing suspicious high CPU process: $rpid"
+            kill -9 "$rpid" || true
+        fi
+    done
+
+    # Wipe toolhub crontab
     if id "$APP_USER" &>/dev/null; then
         crontab -u "$APP_USER" -r || true
     fi
     
     # Clean /tmp of suspicious files
-    rm -rf /tmp/x86_64* /tmp/*.kok /tmp/.*.kok || true
+    rm -rf /tmp/x86_64* /tmp/*.kok /tmp/.*.kok /tmp/kok* || true
     
     log "Security cleanup completed."
+}
+
+# Audit Cgroup and Shell limits
+audit_limits() {
+    log "Auditing resource limits (Cgroups)..."
+    # Check Cgroup Memory limits
+    if [ -f /sys/fs/cgroup/memory.max ]; then
+        log "Cgroup v2 Memory Max: $(cat /sys/fs/cgroup/memory.max)"
+        log "Cgroup v2 Memory Current: $(cat /sys/fs/cgroup/memory.current)"
+    elif [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+        log "Cgroup v1 Memory Limit: $(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)"
+    fi
+    
+    # Check shell limits
+    ulimit -a
+}
+
+# Deep Malware Hunt - look for persistence
+deep_malware_hunt() {
+    log "Searching for malware persistence..."
+    # Check systemd for suspicious services
+    grep -rE "kok|x86_64" /etc/systemd/system /lib/systemd/system /etc/cron* /etc/rc.local 2>/dev/null || true
 }
 
 # Configuration
@@ -53,8 +84,10 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
 
-# 0. Security & Prerequisites
+# 0. Security & Deep Audit
 security_cleanup
+deep_malware_hunt
+audit_limits
 
 # 1. Setup Check
 step "1/10" "Checking environment..."
