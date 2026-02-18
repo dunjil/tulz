@@ -67,19 +67,6 @@ if [ "$FIRST_TIME" = true ]; then
     # Firewall is managed externally or via separate script
 fi
 
-# Ensure swap exists to prevent OOM kills during pip install / npm build
-if [ ! -f /swapfile ]; then
-    log "No swapfile found. Creating 2G swap..."
-    fallocate -l 2G /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    log "Swap enabled."
-else
-    log "Swapfile already exists. Skipping."
-fi
-
 # 3. App User & Directories
 step "3/10" "Configuring application user..."
 if [ "$FIRST_TIME" = true ]; then
@@ -210,17 +197,15 @@ systemctl restart tulz-api tulz-web
 
 # 10. Nginx Config
 step "10/10" "Configuring Nginx..."
+# Try to get domain from .env, if it contains 'tulz.tools' use it, otherwise use tulz.tools as primary
 DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "tulz.tools")
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
 
-log "Using Domain: $DOMAIN and IP: $PUBLIC_IP"
-
-# Only write a fresh Nginx config if no SSL cert exists yet.
-# If a cert is already present, Certbot has already modified this file with SSL directives
-# and we must not overwrite it -- doing so would break HTTPS on every redeploy.
-if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-    log "No SSL cert found. Writing base HTTP Nginx config..."
-    cat > /etc/nginx/sites-available/toolhub <<NGINXEOF
+if [ -f /etc/nginx/sites-available/toolhub ] && grep -q "listen 443" /etc/nginx/sites-available/toolhub; then
+    log "Nginx is already configured with SSL (HTTPS). Skipping overwrite to preserve your certificates."
+else
+    log "Configuring Nginx for Domain: $DOMAIN and IP: $PUBLIC_IP"
+    cat > /etc/nginx/sites-available/toolhub <<EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN $PUBLIC_IP;
@@ -242,9 +227,7 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-NGINXEOF
-else
-    log "SSL cert already exists. Preserving existing Nginx config (skipping overwrite)."
+EOF
 fi
 
 # Ensure default is disabled and our site is enabled
@@ -257,20 +240,6 @@ if nginx -t; then
     log "Nginx restarted successfully"
 else
     error "Nginx configuration test failed"
-fi
-
-# 11. SSL/HTTPS (Optional)
-# If CERTBOT_EMAIL is set in .env, we try to automate SSL
-CERTBOT_EMAIL=$(grep "^CERTBOT_EMAIL=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
-
-if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_" ]; then
-    step "11/11" "Ensuring SSL/HTTPS..."
-    if ! certbot certificates | grep -q "$DOMAIN"; then
-        log "Requesting new SSL certificate for $DOMAIN..."
-        certbot --nginx --non-interactive --agree-tos -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || warn "SSL request failed. Check DNS propagation."
-    else
-        log "SSL certificate for $DOMAIN already exists. Skipping."
-    fi
 fi
 
 log "Deployment Complete!"
