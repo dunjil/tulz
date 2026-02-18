@@ -197,13 +197,17 @@ systemctl restart tulz-api tulz-web
 
 # 10. Nginx Config
 step "10/10" "Configuring Nginx..."
-# Try to get domain from .env, if it contains 'tulz.tools' use it, otherwise use tulz.tools as primary
 DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "tulz.tools")
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
 
 log "Using Domain: $DOMAIN and IP: $PUBLIC_IP"
 
-cat > /etc/nginx/sites-available/toolhub <<EOF
+# Only write a fresh Nginx config if no SSL cert exists yet.
+# If a cert is already present, Certbot has already modified this file with SSL directives
+# and we must not overwrite it -- doing so would break HTTPS on every redeploy.
+if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    log "No SSL cert found. Writing base HTTP Nginx config..."
+    cat > /etc/nginx/sites-available/toolhub <<NGINXEOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN $PUBLIC_IP;
@@ -225,7 +229,10 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-EOF
+NGINXEOF
+else
+    log "SSL cert already exists. Preserving existing Nginx config (skipping overwrite)."
+fi
 
 # Ensure default is disabled and our site is enabled
 rm -f /etc/nginx/sites-enabled/default
@@ -247,10 +254,9 @@ if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_"
     step "11/11" "Ensuring SSL/HTTPS..."
     if ! certbot certificates | grep -q "$DOMAIN"; then
         log "Requesting new SSL certificate for $DOMAIN..."
-        # We use --non-interactive and --agree-tos for automation
         certbot --nginx --non-interactive --agree-tos -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || warn "SSL request failed. Check DNS propagation."
     else
-        log "SSL certificate for $DOMAIN already exists."
+        log "SSL certificate for $DOMAIN already exists. Skipping."
     fi
 fi
 
