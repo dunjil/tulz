@@ -234,13 +234,6 @@ ln -sf /etc/nginx/sites-available/toolhub /etc/nginx/sites-enabled/
 
 # Test and reload
 if nginx -t; then
-    # Ensure firewall is open
-    log "Opening firewall for HTTP and HTTPS..."
-    ufw allow 80/tcp
-    ufw allow 443/tcp
-    ufw --force enable
-    
-    # Restart instead of reload for the first successful configuration application
     systemctl restart nginx
     log "Nginx restarted successfully"
 else
