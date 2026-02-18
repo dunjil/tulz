@@ -192,13 +192,14 @@ systemctl enable tulz-api tulz-web
 systemctl restart tulz-api tulz-web
 
 # 10. Nginx Config
-if [ "$FIRST_TIME" = true ] || [ ! -f /etc/nginx/sites-available/toolhub ]; then
-    step "10/10" "Configuring Nginx..."
-    DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' || echo "_")
-    cat > /etc/nginx/sites-available/toolhub <<EOF
+step "10/10" "Configuring Nginx..."
+DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "_")
+PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
+
+cat > /etc/nginx/sites-available/toolhub <<EOF
 server {
     listen 80;
-    server_name $DOMAIN;
+    server_name $DOMAIN $PUBLIC_IP;
     client_max_body_size 100M;
 
     location /api/ {
@@ -218,9 +219,17 @@ server {
     }
 }
 EOF
-    rm -f /etc/nginx/sites-enabled/default
-    ln -sf /etc/nginx/sites-available/toolhub /etc/nginx/sites-enabled/
-    nginx -t && systemctl restart nginx
+
+# Ensure default is disabled and our site is enabled
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/toolhub /etc/nginx/sites-enabled/
+
+# Test and reload
+if nginx -t; then
+    systemctl restart nginx
+    log "Nginx reloaded successfully"
+else
+    error "Nginx configuration test failed"
 fi
 
 log "Deployment Complete!"
