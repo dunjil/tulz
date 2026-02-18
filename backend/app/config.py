@@ -1,10 +1,9 @@
-"""Application configuration using pydantic-settings."""
-
+import json
 import secrets
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import model_validator, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,7 +28,31 @@ class Settings(BaseSettings):
     port: int = 8000
     # SECURITY: In production, set ALLOWED_ORIGINS to your actual frontend domain(s)
     # Example: ALLOWED_ORIGINS=["https://yourdomain.com"]
-    allowed_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000","http://localhost:3001", "http://127.0.0.1:3001"]
+    allowed_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: any) -> list[str]:
+        """Parse allowed_origins from string (JSON or CSV) if needed."""
+        if isinstance(v, str):
+            v = v.strip()
+            # If it's a JSON list (starts with [)
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    # Try double quotes first
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    # If JSON fails, it might be due to single quotes ['a', 'b']
+                    # We'll try to fix common single quote issues for robustness
+                    try:
+                        return json.loads(v.replace("'", '"'))
+                    except:
+                        pass
+            
+            # Fallback to comma-separated string
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
+
     # Frontend URL for redirects (must match one of allowed_origins)
     frontend_url: str = "http://localhost:3000"
 
