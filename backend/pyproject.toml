@@ -1,0 +1,17 @@
+[project]
+name = "toolhub-backend"
+version = "1.0.0"
+description = "ToolHub - All-in-one productivity suite API"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]

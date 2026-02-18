@@ -1,0 +1,70 @@
+# FastAPI and Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart==0.0.17
+pydantic[email]==2.10.2
+pydantic-settings==2.6.1
+
+# Database
+sqlmodel==0.0.22
+psycopg2-binary==2.9.10
+alembic==1.14.0
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.36
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+
+# HTTP Client (for OAuth, external APIs)
+httpx==0.28.1
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Background Tasks & Scheduling
+apscheduler==3.10.4
+# (Celery/Redis removed for lean deployment)
+
+# File Processing - QR Code
+qrcode[pil]==8.0
+pillow==11.0.0
+
+# File Processing - PDF
+pypdf==5.1.0
+pdf2docx==0.5.8
+reportlab==4.2.5
+PyMuPDF==1.24.14
+
+# File Processing - Excel
+openpyxl==3.1.5
+pandas==2.2.3
+
+# File Processing - Images
+rembg==2.0.59
+
+# OCR (Optical Character Recognition)
+# IMPORTANT: Requires Tesseract system package:
+# Ubuntu: sudo apt-get install tesseract-ocr tesseract-ocr-eng
+# macOS: brew install tesseract
+# For more languages: sudo apt-get install tesseract-ocr-fra tesseract-ocr-deu etc.
+pytesseract==0.3.13
+pdf2image==1.17.0  # Convert PDF pages to images for OCR
+ocrmypdf==16.7.0  # Create searchable PDFs
+python-docx==1.1.2  # Create Word documents from OCR
+opencv-python-headless==4.10.0.84  # Image preprocessing for better OCR
+langdetect==1.0.9  # Automatic language detection
+
+# Email
+httpx==0.28.1
+
+# Utilities
+python-dotenv==1.0.1
+aiofiles==24.1.0
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.1
+gunicorn==21.2.0

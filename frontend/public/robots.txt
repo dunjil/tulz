@@ -1,0 +1,17 @@
+# Tulz Robots.txt
+# https://tulz.tools
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://tulz.tools/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Disallow admin/private paths
+Disallow: /api/
+Disallow: /dashboard/settings
+Disallow: /dashboard/billing
+Disallow: /dashboard/history
