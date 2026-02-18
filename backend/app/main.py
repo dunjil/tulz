@@ -50,21 +50,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Skip strict CSP for Swagger UI docs (they load assets from cdn.jsdelivr.net)
         is_docs_route = request.url.path in ("/docs", "/redoc", "/openapi.json")
         if not is_docs_route:
-            # Basic CSP - allow self for frames to support PDF previews
-            # In development, also allow localhost/127.0.0.1 for connect-src to support various dev ports
-            connect_src = "'self'"
-            if not settings.is_production:
-                connect_src += " localhost:* 127.0.0.1:*"
-                
+            # Relaxed CSP - allow all connections for easier cross-origin work
             response.headers["Content-Security-Policy"] = (
-                f"default-src 'self'; "
-                f"script-src 'self' 'unsafe-inline'; "
-                f"style-src 'self' 'unsafe-inline'; "
-                f"img-src 'self' data: https:; "
-                f"font-src 'self'; "
-                f"connect-src {connect_src}; "
-                f"frame-ancestors 'self'; "
-                f"object-src 'self'"
+                "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; "
+                "frame-ancestors 'self' *; "
+                "object-src 'none'"
             )
 
         return response
@@ -125,25 +115,37 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS middleware
-allowed_origins = list(settings.allowed_origins)
-if not settings.is_production:
-    # Add common development ports if not already present
-    dev_origins = [
-        "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
-        "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002"
-    ]
-    for origin in dev_origins:
-        if origin not in allowed_origins:
-            allowed_origins.append(origin)
+# If allowed_origins is "*", we set allow_credentials=False as per FastAPI/Starlette requirements.
+# Otherwise, we use the list of origins and allow credentials.
+if "*" in settings.allowed_origins:
+    print("DEBUG: CORS - Allowing ALL origins (credentials=False)")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    allowed_origins = list(settings.allowed_origins)
+    if not settings.is_production:
+        # Add common development ports if not already present
+        dev_origins = [
+            "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
+            "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002"
+        ]
+        for origin in dev_origins:
+            if origin not in allowed_origins:
+                allowed_origins.append(origin)
 
-print(f"DEBUG: Allowed Origins: {allowed_origins}")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    print(f"DEBUG: Allowed Origins: {allowed_origins}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 # Custom exception handler
