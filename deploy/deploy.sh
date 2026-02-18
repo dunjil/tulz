@@ -8,10 +8,15 @@ set -e
 
 # Error handling - capture kernel logs on failure
 # Error handling - capture kernel logs on failure
+# Error handling - capture kernel logs on failure
 trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
       free -m; df -h; \
       echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50; \
+      echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager; \
       echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
+      echo -e "\n--- Cgroup Memory Limits ---"; \
+      [ -f /sys/fs/cgroup/memory.max ] && cat /sys/fs/cgroup/memory.max || echo "No cgroup v2 limit"; \
+      [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ] && cat /sys/fs/cgroup/memory/memory.limit_in_bytes || echo "No cgroup v1 limit"; \
       exit 1' ERR
 
 # Configuration
@@ -164,9 +169,17 @@ df -h
 sysctl vm.swappiness
 echo "Current user limits:"
 ulimit -a
+echo "Checking cgroup limits:"
+[ -f /sys/fs/cgroup/memory.max ] && echo "Cgroup v2 max: $(cat /sys/fs/cgroup/memory.max)"
+[ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ] && echo "Cgroup v1 max: $(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)"
 
-log "Creating virtual environment..."
-sudo -u $APP_USER python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
+log "Testing Python binary execution..."
+python${PYTHON_VERSION} --version
+
+log "Creating virtual environment (Root Bypassed)..."
+# We try as root first to see if it survives, then chown it
+python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
+chown -R $APP_USER:$APP_USER $APP_DIR/backend/venv
 
 log "Upgrading pip..."
 sudo -u $APP_USER $APP_DIR/backend/venv/bin/pip install --upgrade pip
@@ -200,15 +213,15 @@ HAS_ALEMBIC=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (S
 
 if [ "$HAS_USERS" = "f" ]; then
     log "Core tables missing. Initializing schema with setup_db.py..."
-    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/python setup_db.py"
+    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/python setup_db.py"
     log "Stamping migration version as head..."
-    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
+    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
 elif [ "$HAS_ALEMBIC" = "f" ]; then
     log "Tables exist but no migration record found. Stamping head..."
-    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
+    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
 else
     log "Database is ready. Running any pending migrations..."
-    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic upgrade head"
+    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic upgrade head"
 fi
 
 # 8. Frontend Build
