@@ -6,6 +6,14 @@
 
 set -e
 
+# Error handling - capture kernel logs on failure
+trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
+      free -m; df -h; \
+      echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50; \
+      echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager; \
+      echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
+      exit 1' ERR
+
 # Configuration
 APP_NAME="toolhub"
 APP_USER="toolhub"
@@ -67,18 +75,30 @@ if [ "$FIRST_TIME" = true ]; then
     # Firewall is managed externally or via separate script
 fi
 
-# Ensure swap exists to prevent OOM kills during pip install / npm build
-if [ ! -f /swapfile ] && [ $(free -m | awk '/^Swap:/ {print $2}') -lt 1000 ]; then
-    log "No significant swap found. Creating 2G swap..."
-    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    log "Swap enabled."
-else
-    log "Swap already exists. Skipping."
-fi
+# Function to ensure swap space exists (4GB)
+ensure_swap() {
+    CURRENT_SWAP=$(free -m | awk '/^Swap:/ {print $2}')
+    if [ "$CURRENT_SWAP" -lt 4000 ]; then
+        log "Current swap ($CURRENT_SWAP MB) is less than 4GB. Ensuring 4GB swap space..."
+        if [ -f /swapfile ]; then
+            swapoff /swapfile || true
+            rm -f /swapfile
+        fi
+        fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        if ! grep -q "/swapfile" /etc/fstab; then
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        fi
+        log "4GB Swap file created and enabled."
+    else
+        log "Sufficient swap space already exists ($CURRENT_SWAP MB)."
+    fi
+}
+
+# 0. Pre-requisites
+ensure_swap
 
 # 3. App User & Directories
 step "3/10" "Configuring application user..."
@@ -161,10 +181,15 @@ else
     log "Virtual environment already exists. Skipping creation."
 fi
 
-# Use --prefer-binary for faster, lower-memory installs
-PIP_CMD="sudo -u $APP_USER $APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir"
+# Use python -m pip for safer execution
+PIP_CMD="sudo -u $APP_USER $APP_DIR/backend/venv/bin/python${PYTHON_VERSION} -m pip install --prefer-binary --no-cache-dir"
 
+log "System status before pip upgrade:"
+free -m
 $PIP_CMD --upgrade pip
+
+log "System status before requirements install:"
+free -m
 $PIP_CMD -r $APP_DIR/backend/requirements.txt
 
 # Database initialization/migration
