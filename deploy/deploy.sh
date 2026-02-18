@@ -67,6 +67,19 @@ if [ "$FIRST_TIME" = true ]; then
     # Firewall is managed externally or via separate script
 fi
 
+# Ensure swap exists to prevent OOM kills during pip install / npm build
+if [ ! -f /swapfile ]; then
+    log "No swapfile found. Creating 2G swap..."
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    log "Swap enabled."
+else
+    log "Swapfile already exists. Skipping."
+fi
+
 # 3. App User & Directories
 step "3/10" "Configuring application user..."
 if [ "$FIRST_TIME" = true ]; then
