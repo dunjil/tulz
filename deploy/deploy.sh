@@ -128,13 +128,20 @@ su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --upgrade pip"
 su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install -r $APP_DIR/backend/requirements.txt"
 
 # Database initialization/migration
-if [ "$FIRST_TIME" = true ]; then
-    log "Initializing database schema..."
+# We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
+HAS_USERS=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users');" || echo "f")
+HAS_ALEMBIC=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version');" || echo "f")
+
+if [ "$HAS_USERS" = "f" ]; then
+    log "Core tables missing. Initializing schema with setup_db.py..."
     su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/python setup_db.py"
     log "Stamping migration version as head..."
     su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
+elif [ "$HAS_ALEMBIC" = "f" ]; then
+    log "Tables exist but no migration record found. Stamping head..."
+    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
 else
-    log "Running database migrations..."
+    log "Database is ready. Running any pending migrations..."
     su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic upgrade head"
 fi
 
