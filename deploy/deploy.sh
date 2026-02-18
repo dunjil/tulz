@@ -64,8 +64,7 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get install -y postgresql-15 postgresql-contrib-15
     systemctl enable postgresql --now
 
-    # Firewall
-    ufw allow 22 && ufw allow 80 && ufw allow 443 && ufw --force enable
+    # Firewall is managed externally or via separate script
 fi
 
 # 3. App User & Directories
