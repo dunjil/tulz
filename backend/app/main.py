@@ -102,8 +102,9 @@ app = FastAPI(
     title=settings.app_name,
     description="All-in-one productivity suite API",
     version=settings.app_version,
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
     lifespan=lifespan,
 )
 
