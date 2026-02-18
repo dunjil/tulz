@@ -126,7 +126,17 @@ step "7/10" "Building backend..."
 su - $APP_USER -c "cd $APP_DIR/backend && python${PYTHON_VERSION} -m venv venv"
 su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --upgrade pip"
 su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install -r $APP_DIR/backend/requirements.txt"
-su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic upgrade head"
+
+# Database initialization/migration
+if [ "$FIRST_TIME" = true ]; then
+    log "Initializing database schema..."
+    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/python setup_db.py"
+    log "Stamping migration version as head..."
+    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
+else
+    log "Running database migrations..."
+    su - $APP_USER -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic upgrade head"
+fi
 
 # 8. Frontend Build
 step "8/10" "Building frontend..."
