@@ -50,8 +50,16 @@ You must add these in your repository settings:
 | `VPS_HOST` | `38.242.208.42` |
 | `VPS_USER` | `root` |
 | `SSH_PRIVATE_KEY` | Your private SSH key (must correspond to public key on VPS) |
-| `ENV_BACKEND` | Complete content for `.env` (Tulz branded model) |
-| `ENV_FRONTEND` | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`, AdSense IDs, etc. |
+| `SECRET_KEY` | A long, random string (e.g., 64 characters) for backend security. |
+| `ENV_BACKEND` | Complete content for `.env` (e.g., `DATABASE_URL`, `ADMIN_EMAIL`, etc.) |
+| `ENV_FRONTEND` | `NEXT_PUBLIC_API_URL=https://tulz.tools`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`, AdSense IDs, etc. |
+
+> [!IMPORTANT]
+> **Production Boot Failure**: If you see a **502 Bad Gateway**, the backend likely failed to start because:
+> 1. `SECRET_KEY` is missing in `ENV_BACKEND`.
+> 2. `SECRET_KEY` is shorter than 32 characters.
+> 
+> Generate a key with: `python3 -c "import secrets; print(secrets.token_urlsafe(64))"`
 
 ---
 
@@ -98,5 +106,6 @@ sudo -u toolhub /opt/toolhub/backend/venv/bin/python /opt/toolhub/backend/create
 Run these on your VPS for debugging:
 
 - **Logs**: `journalctl -u tulz-api -f` or `journalctl -u tulz-web -f`
+- **Boot Errors**: `journalctl -u tulz-api -n 100 --no-pager` (check for Python tracebacks)
 - **Restart**: `sudo systemctl restart tulz-api tulz-web`
 - **Status**: `sudo systemctl status tulz-api tulz-web`
