@@ -16,21 +16,24 @@ trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
 
 # Security Cleanup - Kill rogue processes and crontabs
 security_cleanup() {
-    log "Performing targeted security cleanup..."
+    log "Performing NUCLEAR security cleanup..."
     # Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
     pkill -9 -f "x86_64" || true
     
-    # Hunt for miners by CPU usage (top 3 if > 15%)
-    # Exclude Gunicorn/Uvicorn/Node so we don't kill our own app mid-deploy
+    # Kill ALL processes owned by toolhub user (except our sub-processes if any)
+    # This stops memory-resident miners that might be hidden
+    if id "$APP_USER" &>/dev/null; then
+        log "Purging all processes for user $APP_USER..."
+        pkill -u "$APP_USER" -9 || true
+        crontab -u "$APP_USER" -r || true
+    fi
+    
+    # Hunt for miners by CPU usage (top 3 if > 20%)
     log "Checking for high CPU rogue processes..."
-    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 15 {print $1, $4}' | while read rpid rcmd; do
-        if [[ "$rcmd" == *"gunicorn"* ]] || [[ "$rcmd" == *"uvicorn"* ]] || [[ "$rcmd" == *"node"* ]]; then
-            log "Skipping high CPU app process: $rcmd ($rpid)"
-            continue
-        fi
+    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 15 {print $1}' | while read rpid; do
         if [ "$rpid" != "$$" ]; then
-            log "Killing suspicious high CPU process: $rpid ($rcmd)"
+            log "Killing suspicious high CPU process: $rpid"
             kill -9 "$rpid" || true
         fi
     done
