@@ -120,7 +120,8 @@ if [ "$FIRST_TIME" = true ]; then
         ufw fail2ban nginx certbot python3-certbot-nginx \
         libpq-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libpng-dev \
         poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript \
-        libjemalloc2
+        libjemalloc2 \
+        libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libopenjp2-7-dev libsecret-1-dev libxml2-dev libxslt1-dev
 
     # Python 3.12
     add-apt-repository -y ppa:deadsnakes/ppa
@@ -257,7 +258,11 @@ python${PYTHON_VERSION} -m pip install --upgrade pip || $PIP_CMD --upgrade pip
 
 log "System status before requirements install:"
 free -m
-$PIP_CMD -r $APP_DIR/backend/requirements.txt
+if ! $PIP_CMD -r $APP_DIR/backend/requirements.txt; then
+    warn "Pip requirements installation failed. Inspecting system state..."
+    free -m
+    error "Backend requirements installation failed."
+fi
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
