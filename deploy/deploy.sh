@@ -7,7 +7,12 @@
 set -e
 
 # Error handling - capture kernel logs on failure
-trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; free -m; df -h; dmesg | grep -i "out of memory" | tail -n 10; exit 1' ERR
+# Error handling - capture kernel logs on failure
+trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
+      free -m; df -h; \
+      echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50; \
+      echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
+      exit 1' ERR
 
 # Configuration
 APP_NAME="toolhub"
@@ -151,16 +156,20 @@ fi
 # Always ensure schema permissions (helpful if user was created manually)
 sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $DB_USER_EXTRACTED;" || true
 
-# 7. Backend Setup
 step "7/10" "Building backend..."
 # Log system state before build
 log "System state before backend build:"
 free -m
 df -h
 sysctl vm.swappiness
+echo "Current user limits:"
+ulimit -a
 
-su - $APP_USER -c "cd $APP_DIR/backend && python${PYTHON_VERSION} -m venv venv"
-su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --upgrade pip"
+log "Creating virtual environment..."
+sudo -u $APP_USER python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
+
+log "Upgrading pip..."
+sudo -u $APP_USER $APP_DIR/backend/venv/bin/pip install --upgrade pip
 
 # Install in batches to isolate OOM and find the problematic package
 log "Installing backend dependencies in batches..."
@@ -169,20 +178,20 @@ PIP_CMD="$APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir"
 
 # 1. Base requirements (everything except heavy hitters)
 log "Batch 1: Base requirements..."
-su - $APP_USER -c "grep -vE 'pandas|rembg|opencv|ocrmypdf|pillow|PyMuPDF' $APP_DIR/backend/requirements.txt > /tmp/req_base.txt"
-su - $APP_USER -c "$PIP_CMD -r /tmp/req_base.txt"
+sudo -u $APP_USER bash -c "grep -vE 'pandas|rembg|opencv|ocrmypdf|pillow|PyMuPDF' $APP_DIR/backend/requirements.txt > /tmp/req_base.txt"
+sudo -u $APP_USER $PIP_CMD -r /tmp/req_base.txt
 
 # 2. Individual heavy hitters
 for pkg in "pandas" "pillow" "PyMuPDF" "opencv-python-headless" "rembg" "ocrmypdf"; do
     log "Batch: Installing $pkg..."
     # Get version from requirements if possible
     VERSION=$(grep -i "^$pkg==" $APP_DIR/backend/requirements.txt || echo "$pkg")
-    su - $APP_USER -c "$PIP_CMD $VERSION"
+    sudo -u $APP_USER $PIP_CMD $VERSION
 done
 
 # 3. Final sweep to ensure everything is matched
 log "Batch: Final sync with requirements.txt..."
-su - $APP_USER -c "$PIP_CMD -r $APP_DIR/backend/requirements.txt"
+sudo -u $APP_USER $PIP_CMD -r $APP_DIR/backend/requirements.txt
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
@@ -207,9 +216,9 @@ step "8/10" "Building frontend..."
 # Ensure ownership is correct before building
 chown -R $APP_USER:$APP_USER $APP_DIR/frontend
 # Remove .next to prevent ENOENT errors with trace files during build
-su - $APP_USER -c "cd $APP_DIR/frontend && rm -rf .next"
-su - $APP_USER -c "cd $APP_DIR/frontend && npm install"
-su - $APP_USER -c "cd $APP_DIR/frontend && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
+sudo -u $APP_USER rm -rf $APP_DIR/frontend/.next
+sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && npm install"
+sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
 
 # 9. Systemd Services
 step "9/10" "Updating systemd services..."
