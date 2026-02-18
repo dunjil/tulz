@@ -147,7 +147,12 @@ fi
 
 # 8. Frontend Build
 step "8/10" "Building frontend..."
-su - $APP_USER -c "cd $APP_DIR/frontend && npm install && npm run build"
+# Ensure ownership is correct before building
+chown -R $APP_USER:$APP_USER $APP_DIR/frontend
+# Remove .next to prevent ENOENT errors with trace files during build
+su - $APP_USER -c "cd $APP_DIR/frontend && rm -rf .next"
+su - $APP_USER -c "cd $APP_DIR/frontend && npm install"
+su - $APP_USER -c "cd $APP_DIR/frontend && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
 
 # 9. Systemd Services
 step "9/10" "Updating systemd services..."
