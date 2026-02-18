@@ -6,6 +6,9 @@
 
 set -e
 
+# Error handling - capture kernel logs on failure
+trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; free -m; df -h; dmesg | grep -i "out of memory" | tail -n 10; exit 1' ERR
+
 # Configuration
 APP_NAME="toolhub"
 APP_USER="toolhub"
@@ -150,10 +153,36 @@ sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $D
 
 # 7. Backend Setup
 step "7/10" "Building backend..."
+# Log system state before build
+log "System state before backend build:"
+free -m
+df -h
+sysctl vm.swappiness
+
 su - $APP_USER -c "cd $APP_DIR/backend && python${PYTHON_VERSION} -m venv venv"
 su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --upgrade pip"
-# Use --prefer-binary to avoid memory-intensive source builds and --no-cache-dir to save space/RAM
-su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir -r $APP_DIR/backend/requirements.txt"
+
+# Install in batches to isolate OOM and find the problematic package
+log "Installing backend dependencies in batches..."
+
+PIP_CMD="$APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir"
+
+# 1. Base requirements (everything except heavy hitters)
+log "Batch 1: Base requirements..."
+su - $APP_USER -c "grep -vE 'pandas|rembg|opencv|ocrmypdf|pillow|PyMuPDF' $APP_DIR/backend/requirements.txt > /tmp/req_base.txt"
+su - $APP_USER -c "$PIP_CMD -r /tmp/req_base.txt"
+
+# 2. Individual heavy hitters
+for pkg in "pandas" "pillow" "PyMuPDF" "opencv-python-headless" "rembg" "ocrmypdf"; do
+    log "Batch: Installing $pkg..."
+    # Get version from requirements if possible
+    VERSION=$(grep -i "^$pkg==" $APP_DIR/backend/requirements.txt || echo "$pkg")
+    su - $APP_USER -c "$PIP_CMD $VERSION"
+done
+
+# 3. Final sweep to ensure everything is matched
+log "Batch: Final sync with requirements.txt..."
+su - $APP_USER -c "$PIP_CMD -r $APP_DIR/backend/requirements.txt"
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
