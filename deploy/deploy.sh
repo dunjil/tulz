@@ -266,11 +266,20 @@ fi
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
-HAS_USERS=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users');" || echo "f")
+# Check if essential tables exist
+TABLES_MISSING=false
+for table in "users" "usage_history" "page_visit"; do
+    EXISTS=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '$table');" || echo "f")
+    if [ "$EXISTS" = "f" ]; then
+        log "Table '$table' is missing."
+        TABLES_MISSING=true
+    fi
+done
+
 HAS_ALEMBIC=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version');" || echo "f")
 
-if [ "$HAS_USERS" = "f" ]; then
-    log "Core tables missing. Initializing schema with setup_db.py..."
+if [ "$TABLES_MISSING" = "true" ]; then
+    log "Database schema is incomplete. Initializing with setup_db.py..."
     sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/python setup_db.py"
     log "Stamping migration version as head..."
     sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
