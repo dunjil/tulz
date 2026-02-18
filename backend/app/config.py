@@ -1,7 +1,7 @@
 import json
 import secrets
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import model_validator, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     port: int = 8000
     # SECURITY: In production, set ALLOWED_ORIGINS to your actual frontend domain(s)
     # Example: ALLOWED_ORIGINS=["https://yourdomain.com"]
-    allowed_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    allowed_origins: Any = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
     @field_validator("allowed_origins", mode="before")
     @classmethod
