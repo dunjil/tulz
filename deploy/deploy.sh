@@ -27,24 +27,6 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
 
-# Function to ensure swap space exists (2GB)
-ensure_swap() {
-    if [ $(free -m | grep -i swap | awk '{print $2}') -lt 1000 ]; then
-        log "Creating 2GB swap file to prevent OOM..."
-        fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
-        chmod 600 /swapfile
-        mkswap /swapfile
-        swapon /swapfile
-        echo '/swapfile none swap sw 0 0' >> /etc/fstab
-        log "Swap file created and enabled."
-    else
-        log "Swap space already exists."
-    fi
-}
-
-# 0. Pre-requisites
-ensure_swap
-
 # 1. Setup Check
 step "1/10" "Checking environment..."
 if [ ! -d "$APP_DIR/backend" ]; then
@@ -126,8 +108,6 @@ DB_NAME_EXTRACTED=$(echo $DB_URL | sed 's/.*\/\([^?\/]*\).*/\1/')
 
 log "Syncing user: $DB_USER_EXTRACTED"
 # Create or Update User
-# Run from /tmp to avoid "could not change directory" errors
-cd /tmp
 sudo -u postgres psql -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$DB_USER_EXTRACTED') THEN CREATE ROLE $DB_USER_EXTRACTED WITH LOGIN PASSWORD '$DB_PASS_EXTRACTED'; ELSE ALTER ROLE $DB_USER_EXTRACTED WITH PASSWORD '$DB_PASS_EXTRACTED'; END IF; END \$\$;"
 
 # Create Database if missing
@@ -144,7 +124,7 @@ sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $D
 step "7/10" "Building backend..."
 su - $APP_USER -c "cd $APP_DIR/backend && python${PYTHON_VERSION} -m venv venv"
 su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --upgrade pip"
-su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --no-cache-dir -r $APP_DIR/backend/requirements.txt"
+su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install -r $APP_DIR/backend/requirements.txt"
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
@@ -221,11 +201,9 @@ step "10/10" "Configuring Nginx..."
 DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "tulz.tools")
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
 
-if [ -f /etc/nginx/sites-available/toolhub ] && grep -q "listen 443" /etc/nginx/sites-available/toolhub; then
-    log "Nginx is already configured with SSL (HTTPS). Skipping overwrite to preserve your certificates."
-else
-    log "Configuring Nginx for Domain: $DOMAIN and IP: $PUBLIC_IP"
-    cat > /etc/nginx/sites-available/toolhub <<EOF
+log "Using Domain: $DOMAIN and IP: $PUBLIC_IP"
+
+cat > /etc/nginx/sites-available/toolhub <<EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN $PUBLIC_IP;
@@ -248,7 +226,6 @@ server {
     }
 }
 EOF
-fi
 
 # Ensure default is disabled and our site is enabled
 rm -f /etc/nginx/sites-enabled/default
@@ -260,6 +237,21 @@ if nginx -t; then
     log "Nginx restarted successfully"
 else
     error "Nginx configuration test failed"
+fi
+
+# 11. SSL/HTTPS (Optional)
+# If CERTBOT_EMAIL is set in .env, we try to automate SSL
+CERTBOT_EMAIL=$(grep "^CERTBOT_EMAIL=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
+
+if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_" ]; then
+    step "11/11" "Ensuring SSL/HTTPS..."
+    if ! certbot certificates | grep -q "$DOMAIN"; then
+        log "Requesting new SSL certificate for $DOMAIN..."
+        # We use --non-interactive and --agree-tos for automation
+        certbot --nginx --non-interactive --agree-tos -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || warn "SSL request failed. Check DNS propagation."
+    else
+        log "SSL certificate for $DOMAIN already exists."
+    fi
 fi
 
 log "Deployment Complete!"
