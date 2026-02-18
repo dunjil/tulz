@@ -330,17 +330,28 @@ systemctl restart tulz-api tulz-web
 
 # 10. Nginx Config
 step "10/10" "Configuring Nginx..."
-DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "tulz.tools")
+# Robustly get domain from .env (handles spaces, quotes, etc)
+DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | head -n 1 | sed -E 's/^DOMAIN=["'\'']?([^"'\'']+)["'\'']?.*$/\1/' | xargs || echo "tulz.tools")
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
 
 log "Using Domain: $DOMAIN and IP: $PUBLIC_IP"
 
-# Only write a fresh Nginx config if no SSL cert exists yet.
-# If a cert is already present, Certbot has already modified this file with SSL directives
-# and we must not overwrite it -- doing so would break HTTPS on every redeploy.
-if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-    log "No SSL cert found. Writing base HTTP Nginx config..."
-    cat > /etc/nginx/sites-available/toolhub <<NGINXEOF
+NGINX_CONF="/etc/nginx/sites-available/toolhub"
+NGINX_ENABLED="/etc/nginx/sites-enabled/toolhub"
+
+# Check if Nginx config already exists and has SSL directives
+# We check the FILE CONTENT because Certbot modifies it directly.
+SHOULD_OVERWRITE=true
+if [ -f "$NGINX_CONF" ]; then
+    if grep -q "ssl_certificate" "$NGINX_CONF"; then
+        log "SSL directives detected in existing Nginx config. Preserving file."
+        SHOULD_OVERWRITE=false
+    fi
+fi
+
+if [ "$SHOULD_OVERWRITE" = true ]; then
+    log "Writing base HTTP Nginx config..."
+    cat > "$NGINX_CONF" <<NGINXEOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN $PUBLIC_IP;
@@ -369,7 +380,7 @@ fi
 
 # Ensure default is disabled and our site is enabled
 rm -f /etc/nginx/sites-enabled/default
-ln -sf /etc/nginx/sites-available/toolhub /etc/nginx/sites-enabled/
+ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
 
 # Test and reload
 if nginx -t; then
@@ -381,15 +392,26 @@ fi
 
 # 11. SSL/HTTPS (Optional)
 # If CERTBOT_EMAIL is set in .env, we try to automate SSL
-CERTBOT_EMAIL=$(grep "^CERTBOT_EMAIL=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
+CERTBOT_EMAIL=$(grep "^CERTBOT_EMAIL=" $APP_DIR/backend/.env | head -n 1 | sed -E 's/^CERTBOT_EMAIL=["'\'']?([^"'\'']+)["'\'']?.*$/\1/' | xargs || echo "")
 
 if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_" ]; then
     step "11/11" "Ensuring SSL/HTTPS..."
-    if ! certbot certificates | grep -q "$DOMAIN"; then
+    
+    # Check if we have a cert but Nginx is missing SSL config (accidental overwrite repair)
+    HAS_CERT=false
+    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then HAS_CERT=true; fi
+    
+    HAS_NGINX_SSL=false
+    if grep -q "ssl_certificate" "$NGINX_CONF"; then HAS_NGINX_SSL=true; fi
+
+    if [ "$HAS_CERT" = true ] && [ "$HAS_NGINX_SSL" = false ]; then
+        log "Cert exists on disk but Nginx is missing SSL. Re-patching config..."
+        certbot --nginx --non-interactive --agree-tos --reinstall -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || true
+    elif [ "$HAS_CERT" = false ]; then
         log "Requesting new SSL certificate for $DOMAIN..."
         certbot --nginx --non-interactive --agree-tos -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || warn "SSL request failed. Check DNS propagation."
     else
-        log "SSL certificate for $DOMAIN already exists. Skipping."
+        log "SSL certificate for $DOMAIN already exists and Nginx is patched. Skipping."
     fi
 fi
 
