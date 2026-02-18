@@ -99,14 +99,27 @@ chown $APP_USER:$APP_USER $APP_DIR/backend/.env $APP_DIR/frontend/.env.local
 chmod 600 $APP_DIR/backend/.env $APP_DIR/frontend/.env.local
 
 # 6. Database Setup
-if [ "$FIRST_TIME" = true ]; then
-    step "6/10" "Setting up database..."
-    DB_PASS=$(grep "^DATABASE_URL=" $APP_DIR/backend/.env | sed 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/' || echo "safe_password")
-    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';" || true
-    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" || true
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" || true
-    sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;" || true
+step "6/10" "Synchronizing database credentials..."
+# Extract credentials from .env
+DB_URL=$(grep "^DATABASE_URL=" $APP_DIR/backend/.env | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+# Extract user, pass, host, port, dbname from URL: postgresql+asyncpg://user:pass@host:port/dbname
+DB_USER_EXTRACTED=$(echo $DB_URL | sed 's/.*:\/\/\([^:]*\):.*/\1/')
+DB_PASS_EXTRACTED=$(echo $DB_URL | sed 's/.*:\/\/.*:\([^@]*\)@.*/\1/')
+DB_NAME_EXTRACTED=$(echo $DB_URL | sed 's/.*\/\([^?\/]*\).*/\1/')
+
+log "Syncing user: $DB_USER_EXTRACTED"
+# Create or Update User
+sudo -u postgres psql -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$DB_USER_EXTRACTED') THEN CREATE ROLE $DB_USER_EXTRACTED WITH LOGIN PASSWORD '$DB_PASS_EXTRACTED'; ELSE ALTER ROLE $DB_USER_EXTRACTED WITH PASSWORD '$DB_PASS_EXTRACTED'; END IF; END \$\$;"
+
+# Create Database if missing
+if [ "$FIRST_TIME" = true ] || ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME_EXTRACTED"; then
+    log "Creating database: $DB_NAME_EXTRACTED"
+    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME_EXTRACTED OWNER $DB_USER_EXTRACTED;" || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME_EXTRACTED TO $DB_USER_EXTRACTED;" || true
 fi
+
+# Always ensure schema permissions (helpful if user was created manually)
+sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $DB_USER_EXTRACTED;" || true
 
 # 7. Backend Setup
 step "7/10" "Building backend..."
