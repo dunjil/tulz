@@ -29,7 +29,7 @@ apscheduler==3.10.4
 
 # File Processing - QR Code
 qrcode[pil]==8.0
-pillow==11.0.0
+pillow==10.4.0
 
 # File Processing - PDF
 pypdf==5.1.0
