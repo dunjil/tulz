@@ -193,13 +193,16 @@ systemctl restart tulz-api tulz-web
 
 # 10. Nginx Config
 step "10/10" "Configuring Nginx..."
-DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "_")
+# Try to get domain from .env, if it contains 'tulz.tools' use it, otherwise use tulz.tools as primary
+DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "tulz.tools")
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
+
+log "Using Domain: $DOMAIN and IP: $PUBLIC_IP"
 
 cat > /etc/nginx/sites-available/toolhub <<EOF
 server {
     listen 80;
-    server_name $DOMAIN $PUBLIC_IP;
+    server_name $DOMAIN www.$DOMAIN $PUBLIC_IP;
     client_max_body_size 100M;
 
     location /api/ {
