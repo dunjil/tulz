@@ -64,7 +64,7 @@ prompt "Enter SSH user (default: root) [$SSH_USER]: "
 read -r input
 SSH_USER=${input:-${SSH_USER:-root}}
 
-prompt "Enter domain name (e.g., toolhub.example.com) [$DOMAIN]: "
+prompt "Enter domain name (e.g., tulz.tools) [$DOMAIN]: "
 read -r input
 DOMAIN=${input:-$DOMAIN}
 

@@ -116,7 +116,7 @@ ToolHub/
 
 ```bash
 # Download and run setup script
-curl -O https://raw.githubusercontent.com/your-repo/toolhub/main/deploy/setup.sh
+curl -O https://raw.githubusercontent.com/dunjil/tulz/main/deploy/setup.sh
 chmod +x setup.sh
 sudo DOMAIN=yourdomain.com ./setup.sh
 ```
@@ -144,12 +144,10 @@ After starting the backend, visit:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
+
 ## Pricing
 
-| Plan | Price | Features |
-|------|-------|----------|
-| Free | $0 | 3 uses/day on premium tools, watermarked output, unlimited free tools (Calculator, Excel to CSV, Favicon, JSON Formatter, Markdown to PDF, Text Diff) |
-| Pro | $10/month ($8/month annual) | Unlimited uses, no watermarks, highest quality output, batch processing, all paper sizes & formats, priority support |
+**100% Free** - All tools, unlimited usage, no paywalls. Supported by ads and donations.
 
 ## Environment Variables
 
@@ -159,7 +157,7 @@ Key variables:
 - `DATABASE_URL`: PostgreSQL connection string
 - `SECRET_KEY`: JWT signing key
 - `GOOGLE_CLIENT_ID/SECRET`: Google OAuth
-- `POLAR_ACCESS_TOKEN`: Polar.sh payments
+- `GOOGLE_ADSENSE_CLIENT_ID`: Google AdSense for ads
 - `ZEPTOMAIL_API_KEY`: Email service
 
 ## License
