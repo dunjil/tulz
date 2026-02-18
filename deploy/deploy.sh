@@ -229,14 +229,29 @@ ln -sf /etc/nginx/sites-available/toolhub /etc/nginx/sites-enabled/
 
 # Test and reload
 if nginx -t; then
-    systemctl restart nginx
+    systemctl reload nginx
     log "Nginx reloaded successfully"
 else
     error "Nginx configuration test failed"
+fi
+
+# 11. SSL/HTTPS (Optional)
+# If CERTBOT_EMAIL is set in .env, we try to automate SSL
+CERTBOT_EMAIL=$(grep "^CERTBOT_EMAIL=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "")
+
+if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_" ]; then
+    step "11/11" "Ensuring SSL/HTTPS..."
+    if ! certbot certificates | grep -q "$DOMAIN"; then
+        log "Requesting new SSL certificate for $DOMAIN..."
+        # We use --non-interactive and --agree-tos for automation
+        certbot --nginx --non-interactive --agree-tos -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || warn "SSL request failed. Check DNS propagation."
+    else
+        log "SSL certificate for $DOMAIN already exists."
+    fi
 fi
 
 log "Deployment Complete!"
 echo -e "${YELLOW}IMPORTANT:${NC} To create your first admin account, run:"
 echo "sudo -u $APP_USER $APP_DIR/backend/venv/bin/python $APP_DIR/backend/create_admin.py your@email.com your_password"
 echo ""
-echo "Check your site at http://$DOMAIN (or run certbot for SSL)"
+echo "Check your site at https://$DOMAIN (or http://$PUBLIC_IP)"
