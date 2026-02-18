@@ -6,8 +6,6 @@
 
 set -e
 
-trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Exit code: $?"; exit 1' ERR
-
 # Configuration
 APP_NAME="toolhub"
 APP_USER="toolhub"
@@ -28,32 +26,6 @@ log() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
-
-# Function to ensure swap space exists (4GB)
-ensure_swap() {
-    CURRENT_SWAP=$(free -m | awk '/^Swap:/ {print $2}')
-    if [ "$CURRENT_SWAP" -lt 4000 ]; then
-        log "Current swap ($CURRENT_SWAP MB) is less than 4GB. Increasing swap space..."
-        # If /swapfile exists, turn it off first to resize it
-        if [ -f /swapfile ]; then
-            swapoff /swapfile || true
-            rm -f /swapfile
-        fi
-        fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
-        chmod 600 /swapfile
-        mkswap /swapfile
-        swapon /swapfile
-        if ! grep -q "/swapfile" /etc/fstab; then
-            echo '/swapfile none swap sw 0 0' >> /etc/fstab
-        fi
-        log "4GB Swap file created and enabled."
-    else
-        log "Sufficient swap space already exists ($CURRENT_SWAP MB)."
-    fi
-}
-
-# 0. Pre-requisites
-ensure_swap
 
 # 1. Setup Check
 step "1/10" "Checking environment..."
@@ -95,6 +67,19 @@ if [ "$FIRST_TIME" = true ]; then
     # Firewall is managed externally or via separate script
 fi
 
+# Ensure swap exists to prevent OOM kills during pip install / npm build
+if [ ! -f /swapfile ] && [ $(free -m | awk '/^Swap:/ {print $2}') -lt 1000 ]; then
+    log "No significant swap found. Creating 2G swap..."
+    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    log "Swap enabled."
+else
+    log "Swap already exists. Skipping."
+fi
+
 # 3. App User & Directories
 step "3/10" "Configuring application user..."
 if [ "$FIRST_TIME" = true ]; then
@@ -108,20 +93,25 @@ fi
 # 4. Extract Code
 step "4/10" "Updating application code..."
 if [ -f /tmp/toolhub-code.tar.gz ]; then
-    # Persist environments if they exist
-    [ -d "$APP_DIR/backend/venv" ] && mv $APP_DIR/backend/venv /tmp/toolhub_venv_bak
-    [ -d "$APP_DIR/frontend/node_modules" ] && mv $APP_DIR/frontend/node_modules /tmp/toolhub_node_bak
+    # Preserve the venv across deploys -- recreating it from scratch is slow and
+    # can be killed on low-resource moments. Move it out before backup, restore after.
+    if [ -d "$APP_DIR/backend/venv" ]; then
+        log "Preserving existing venv..."
+        mv $APP_DIR/backend/venv /tmp/toolhub-venv-preserve
+    fi
 
     # Backup & Clean
     [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak_$(date +%F_%T)
     [ -d "$APP_DIR/frontend" ] && mv $APP_DIR/frontend $APP_DIR/frontend.bak_$(date +%F_%T)
-    
+
     tar -xzf /tmp/toolhub-code.tar.gz -C $APP_DIR
-    
-    # Restore environments
-    [ -d "/tmp/toolhub_venv_bak" ] && mv /tmp/toolhub_venv_bak $APP_DIR/backend/venv
-    [ -d "/tmp/toolhub_node_bak" ] && mv /tmp/toolhub_node_bak $APP_DIR/frontend/node_modules
-    
+
+    # Restore venv
+    if [ -d /tmp/toolhub-venv-preserve ]; then
+        log "Restoring preserved venv..."
+        mv /tmp/toolhub-venv-preserve $APP_DIR/backend/venv
+    fi
+
     chown -R $APP_USER:$APP_USER $APP_DIR
 else
     error "Code tarball missing at /tmp/toolhub-code.tar.gz"
@@ -159,7 +149,10 @@ fi
 # Always ensure schema permissions (helpful if user was created manually)
 sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $DB_USER_EXTRACTED;" || true
 
+# 7. Backend Setup
 step "7/10" "Building backend..."
+
+# Create venv only if it doesn't already exist (preserved from previous deploy)
 if [ ! -d "$APP_DIR/backend/venv" ]; then
     log "Creating virtual environment..."
     python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
@@ -168,30 +161,11 @@ else
     log "Virtual environment already exists. Skipping creation."
 fi
 
-log "Upgrading pip..."
-sudo -u $APP_USER $APP_DIR/backend/venv/bin/pip install --upgrade pip
+# Use --prefer-binary for faster, lower-memory installs
+PIP_CMD="sudo -u $APP_USER $APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir"
 
-# Install in batches to isolate OOM and find the problematic package
-log "Installing backend dependencies in batches..."
-
-PIP_CMD="$APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir"
-
-# 1. Base requirements (everything except heavy hitters)
-log "Batch 1: Base requirements..."
-sudo -u $APP_USER bash -c "grep -vE 'pandas|rembg|opencv|ocrmypdf|pillow|PyMuPDF' $APP_DIR/backend/requirements.txt > /tmp/req_base.txt"
-sudo -u $APP_USER $PIP_CMD -r /tmp/req_base.txt
-
-# 2. Individual heavy hitters
-for pkg in "pandas" "pillow" "PyMuPDF" "opencv-python-headless" "rembg" "ocrmypdf"; do
-    log "Batch: Installing $pkg..."
-    # Get version from requirements if possible
-    VERSION=$(grep -i "^$pkg==" $APP_DIR/backend/requirements.txt || echo "$pkg")
-    sudo -u $APP_USER $PIP_CMD $VERSION
-done
-
-# 3. Final sweep to ensure everything is matched
-log "Batch: Final sync with requirements.txt..."
-sudo -u $APP_USER $PIP_CMD -r $APP_DIR/backend/requirements.txt
+$PIP_CMD --upgrade pip
+$PIP_CMD -r $APP_DIR/backend/requirements.txt
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
@@ -264,13 +238,17 @@ systemctl restart tulz-api tulz-web
 
 # 10. Nginx Config
 step "10/10" "Configuring Nginx..."
-# Try to get domain from .env, if it contains 'tulz.tools' use it, otherwise use tulz.tools as primary
 DOMAIN=$(grep "^DOMAIN=" $APP_DIR/backend/.env | cut -d'=' -f2 | tr -d '"' | tr -d "'" | tr -d ' ' || echo "tulz.tools")
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
 
 log "Using Domain: $DOMAIN and IP: $PUBLIC_IP"
 
-cat > /etc/nginx/sites-available/toolhub <<EOF
+# Only write a fresh Nginx config if no SSL cert exists yet.
+# If a cert is already present, Certbot has already modified this file with SSL directives
+# and we must not overwrite it -- doing so would break HTTPS on every redeploy.
+if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    log "No SSL cert found. Writing base HTTP Nginx config..."
+    cat > /etc/nginx/sites-available/toolhub <<NGINXEOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN $PUBLIC_IP;
@@ -292,7 +270,10 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-EOF
+NGINXEOF
+else
+    log "SSL cert already exists. Preserving existing Nginx config (skipping overwrite)."
+fi
 
 # Ensure default is disabled and our site is enabled
 rm -f /etc/nginx/sites-enabled/default
@@ -314,10 +295,9 @@ if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_"
     step "11/11" "Ensuring SSL/HTTPS..."
     if ! certbot certificates | grep -q "$DOMAIN"; then
         log "Requesting new SSL certificate for $DOMAIN..."
-        # We use --non-interactive and --agree-tos for automation
         certbot --nginx --non-interactive --agree-tos -m "$CERTBOT_EMAIL" -d "$DOMAIN" -d "www.$DOMAIN" || warn "SSL request failed. Check DNS propagation."
     else
-        log "SSL certificate for $DOMAIN already exists."
+        log "SSL certificate for $DOMAIN already exists. Skipping."
     fi
 fi
 
