@@ -19,12 +19,15 @@ interface UpgradeModalContextType {
 
 const UpgradeModalContext = createContext<UpgradeModalContextType | null>(null);
 
+/**
+ * Stub for useUpgradeModal to prevent crashes since its provider was removed.
+ * Final cleanup will remove this entirely from all components.
+ */
 export function useUpgradeModal() {
-  const context = useContext(UpgradeModalContext);
-  if (!context) {
-    throw new Error("useUpgradeModal must be used within UpgradeModalProvider");
-  }
-  return context;
+  return {
+    showUpgradeModal: () => console.log("Upgrade modal requested but disabled (100% free model)"),
+    hideUpgradeModal: () => { }
+  };
 }
 
 // Global reference for the API interceptor
