@@ -6,18 +6,7 @@
 
 set -e
 
-# Error handling - capture kernel logs on failure
-# Error handling - capture kernel logs on failure
-# Error handling - capture kernel logs on failure
-trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
-      free -m; df -h; \
-      echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50; \
-      echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager; \
-      echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
-      echo -e "\n--- Cgroup Memory Limits ---"; \
-      [ -f /sys/fs/cgroup/memory.max ] && cat /sys/fs/cgroup/memory.max || echo "No cgroup v2 limit"; \
-      [ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ] && cat /sys/fs/cgroup/memory/memory.limit_in_bytes || echo "No cgroup v1 limit"; \
-      exit 1' ERR
+trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Exit code: $?"; exit 1' ERR
 
 # Configuration
 APP_NAME="toolhub"
@@ -119,11 +108,20 @@ fi
 # 4. Extract Code
 step "4/10" "Updating application code..."
 if [ -f /tmp/toolhub-code.tar.gz ]; then
+    # Persist environments if they exist
+    [ -d "$APP_DIR/backend/venv" ] && mv $APP_DIR/backend/venv /tmp/toolhub_venv_bak
+    [ -d "$APP_DIR/frontend/node_modules" ] && mv $APP_DIR/frontend/node_modules /tmp/toolhub_node_bak
+
     # Backup & Clean
     [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak_$(date +%F_%T)
     [ -d "$APP_DIR/frontend" ] && mv $APP_DIR/frontend $APP_DIR/frontend.bak_$(date +%F_%T)
     
     tar -xzf /tmp/toolhub-code.tar.gz -C $APP_DIR
+    
+    # Restore environments
+    [ -d "/tmp/toolhub_venv_bak" ] && mv /tmp/toolhub_venv_bak $APP_DIR/backend/venv
+    [ -d "/tmp/toolhub_node_bak" ] && mv /tmp/toolhub_node_bak $APP_DIR/frontend/node_modules
+    
     chown -R $APP_USER:$APP_USER $APP_DIR
 else
     error "Code tarball missing at /tmp/toolhub-code.tar.gz"
@@ -162,24 +160,13 @@ fi
 sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $DB_USER_EXTRACTED;" || true
 
 step "7/10" "Building backend..."
-# Log system state before build
-log "System state before backend build:"
-free -m
-df -h
-sysctl vm.swappiness
-echo "Current user limits:"
-ulimit -a
-echo "Checking cgroup limits:"
-[ -f /sys/fs/cgroup/memory.max ] && echo "Cgroup v2 max: $(cat /sys/fs/cgroup/memory.max)"
-[ -f /sys/fs/cgroup/memory/memory.limit_in_bytes ] && echo "Cgroup v1 max: $(cat /sys/fs/cgroup/memory/memory.limit_in_bytes)"
-
-log "Testing Python binary execution..."
-python${PYTHON_VERSION} --version
-
-log "Creating virtual environment (Root Bypassed)..."
-# We try as root first to see if it survives, then chown it
-python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
-chown -R $APP_USER:$APP_USER $APP_DIR/backend/venv
+if [ ! -d "$APP_DIR/backend/venv" ]; then
+    log "Creating virtual environment..."
+    python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
+    chown -R $APP_USER:$APP_USER $APP_DIR/backend/venv
+else
+    log "Virtual environment already exists. Skipping creation."
+fi
 
 log "Upgrading pip..."
 sudo -u $APP_USER $APP_DIR/backend/venv/bin/pip install --upgrade pip
