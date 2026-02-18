@@ -27,18 +27,26 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
 
-# Function to ensure swap space exists (2GB)
+# Function to ensure swap space exists (4GB)
 ensure_swap() {
-    if [ $(free -m | grep -i swap | awk '{print $2}') -lt 1000 ]; then
-        log "Creating 2GB swap file to prevent OOM..."
-        fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+    CURRENT_SWAP=$(free -m | awk '/^Swap:/ {print $2}')
+    if [ "$CURRENT_SWAP" -lt 4000 ]; then
+        log "Current swap ($CURRENT_SWAP MB) is less than 4GB. Increasing swap space..."
+        # If /swapfile exists, turn it off first to resize it
+        if [ -f /swapfile ]; then
+            swapoff /swapfile || true
+            rm -f /swapfile
+        fi
+        fallocate -l 4G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=4096
         chmod 600 /swapfile
         mkswap /swapfile
         swapon /swapfile
-        echo '/swapfile none swap sw 0 0' >> /etc/fstab
-        log "Swap file created and enabled."
+        if ! grep -q "/swapfile" /etc/fstab; then
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        fi
+        log "4GB Swap file created and enabled."
     else
-        log "Swap space already exists."
+        log "Sufficient swap space already exists ($CURRENT_SWAP MB)."
     fi
 }
 
@@ -144,7 +152,8 @@ sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $D
 step "7/10" "Building backend..."
 su - $APP_USER -c "cd $APP_DIR/backend && python${PYTHON_VERSION} -m venv venv"
 su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --upgrade pip"
-su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --no-cache-dir -r $APP_DIR/backend/requirements.txt"
+# Use --prefer-binary to avoid memory-intensive source builds and --no-cache-dir to save space/RAM
+su - $APP_USER -c "$APP_DIR/backend/venv/bin/pip install --prefer-binary --no-cache-dir -r $APP_DIR/backend/requirements.txt"
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
