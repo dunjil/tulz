@@ -16,24 +16,21 @@ trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
 
 # Security Cleanup - Kill rogue processes and crontabs
 security_cleanup() {
-    log "Performing NUCLEAR security cleanup..."
+    log "Performing targeted security cleanup..."
     # Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
     pkill -9 -f "x86_64" || true
     
-    # Kill ALL processes owned by toolhub user (except our sub-processes if any)
-    # This stops memory-resident miners that might be hidden
-    if id "$APP_USER" &>/dev/null; then
-        log "Purging all processes for user $APP_USER..."
-        pkill -u "$APP_USER" -9 || true
-        crontab -u "$APP_USER" -r || true
-    fi
-    
-    # Hunt for miners by CPU usage (top 3 if > 20%)
+    # Hunt for miners by CPU usage (top 3 if > 15%)
+    # Exclude Gunicorn/Uvicorn/Node so we don't kill our own app mid-deploy
     log "Checking for high CPU rogue processes..."
-    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 15 {print $1}' | while read rpid; do
+    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 15 {print $1, $4}' | while read rpid rcmd; do
+        if [[ "$rcmd" == *"gunicorn"* ]] || [[ "$rcmd" == *"uvicorn"* ]] || [[ "$rcmd" == *"node"* ]]; then
+            log "Skipping high CPU app process: $rcmd ($rpid)"
+            continue
+        fi
         if [ "$rpid" != "$$" ]; then
-            log "Killing suspicious high CPU process: $rpid"
+            log "Killing suspicious high CPU process: $rpid ($rcmd)"
             kill -9 "$rpid" || true
         fi
     done
@@ -328,8 +325,31 @@ systemctl daemon-reload
 systemctl enable tulz-api tulz-web
 systemctl restart tulz-api tulz-web
 
-# 10. Nginx Config
-step "10/10" "Configuring Nginx..."
+# 10. Health Verification
+step "10/11" "Verifying service health..."
+log "Waiting for services to settle..."
+sleep 5
+
+# Verify Backend
+if curl -s -f http://127.0.0.1:8000/health > /dev/null; then
+    log "Backend API is UP and HEALTHY."
+else
+    warn "Backend API failed health check. Inspecting logs..."
+    journalctl -u tulz-api.service -n 50 --no-pager
+    error "Backend failed to start correctly."
+fi
+
+# Verify Frontend
+if curl -s -f http://127.0.0.1:3000 > /dev/null; then
+    log "Frontend Web is UP."
+else
+    warn "Frontend Web failed health check. Inspecting logs..."
+    journalctl -u tulz-web.service -n 50 --no-pager
+    error "Frontend failed to start correctly."
+fi
+
+# 11. Nginx Config
+step "11/11" "Configuring Nginx..."
 # Robustly get domain from .env (handles "DOMAIN = value", "DOMAIN=value", quotes, etc)
 DOMAIN=$(grep -i "^DOMAIN" "$APP_DIR/backend/.env" | head -n 1 | sed -E 's/^DOMAIN[:space:]*=[:space:]*["'\'']?([^"'\'']+)["'\'']?.*$/\1/I' | xargs 2>/dev/null || echo "tulz.tools")
 # Fallback if domain is still empty after grep
