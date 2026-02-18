@@ -14,6 +14,24 @@ trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
       echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
       exit 1' ERR
 
+# Security Cleanup - Kill rogue processes and crontabs
+security_cleanup() {
+    log "Performing security cleanup..."
+    # Kill any processes matching known malware signatures
+    pkill -f "kok" || true
+    pkill -f "x86_64" || true
+    
+    # Wipe toolhub crontab (where malware often persists)
+    if id "$APP_USER" &>/dev/null; then
+        crontab -u "$APP_USER" -r || true
+    fi
+    
+    # Clean /tmp of suspicious files
+    rm -rf /tmp/x86_64* /tmp/*.kok /tmp/.*.kok || true
+    
+    log "Security cleanup completed."
+}
+
 # Configuration
 APP_NAME="toolhub"
 APP_USER="toolhub"
@@ -34,6 +52,9 @@ log() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
+
+# 0. Security & Prerequisites
+security_cleanup
 
 # 1. Setup Check
 step "1/10" "Checking environment..."
@@ -186,7 +207,8 @@ PIP_CMD="sudo -u $APP_USER $APP_DIR/backend/venv/bin/python${PYTHON_VERSION} -m 
 
 log "System status before pip upgrade:"
 free -m
-$PIP_CMD --upgrade pip
+# Run as root if user-level is being killed by malware
+python${PYTHON_VERSION} -m pip install --upgrade pip || $PIP_CMD --upgrade pip
 
 log "System status before requirements install:"
 free -m
