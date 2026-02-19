@@ -41,6 +41,10 @@ security_cleanup() {
     # Clean /tmp of suspicious files
     rm -rf /tmp/x86_64* /tmp/*.kok /tmp/.*.kok /tmp/kok* || true
     
+    # KILL processes using port 25 (SMTP) - This is where the leak is
+    log "Hunting for processes using port 25 (SMTP)..."
+    lsof -i :25 -t | xargs kill -9 2>/dev/null || true
+    
     log "Security cleanup completed."
 }
 
@@ -73,6 +77,16 @@ deep_malware_hunt() {
     
     # Check for suspicious files in /etc
     find /etc -name "*.kok" -o -name "x86_64*" 2>/dev/null || true
+
+    # Look for hidden miners/scripts in common dirs
+    log "Checking for hidden malicious scripts..."
+    find /var/tmp /dev/shm /tmp -type f -executable 2>/dev/null || true
+    
+    # Check crontabs for ALL users for suspicious curl/wget commands
+    log "Auditing all user crontabs for suspicious activity..."
+    for user in $(cut -f1 -d: /etc/passwd); do
+        crontab -u "$user" -l 2>/dev/null | grep -E "curl|wget|http" && log "Suspicious crontab for $user" || true
+    done
 }
 
 # Configuration
@@ -121,7 +135,8 @@ if [ "$FIRST_TIME" = true ]; then
         libpq-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libpng-dev \
         poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript \
         libjemalloc2 \
-        libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libopenjp2-7-dev libsecret-1-dev libxml2-dev libxslt1-dev
+        libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libopenjp2-7-dev libsecret-1-dev libxml2-dev libxslt1-dev \
+        libgvpr2 libgbm1 libasound2
 
     # Python 3.12
     add-apt-repository -y ppa:deadsnakes/ppa
@@ -139,7 +154,21 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get install -y postgresql-15 postgresql-contrib-15
     systemctl enable postgresql --now
 
-    # Firewall is managed externally or via separate script
+    # Firewall & Security Hardening
+    step "2.1/10" "Hardening Firewall..."
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow ssh
+    ufw allow 'Nginx Full'
+    
+    # CRITICAL: BLOCK Port 25 Outbound (Stop the spam bot)
+    log "BLOCKING OUTBOUND SMTP (Port 25)..."
+    ufw deny out 25/tcp
+    ufw deny out 465/tcp
+    ufw deny out 587/tcp
+    
+    ufw --force enable
+    log "Firewall hardened and Port 25 blocked."
 fi
 
 # Function to ensure swap space exists (4GB)
@@ -263,6 +292,10 @@ if ! $PIP_CMD -r $APP_DIR/backend/requirements.txt; then
     free -m
     error "Backend requirements installation failed."
 fi
+
+# Install Playwright browsers (Chromium)
+log "Installing Playwright Chromium browser..."
+sudo -u $APP_USER $APP_DIR/backend/venv/bin/playwright install chromium
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
