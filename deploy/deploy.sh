@@ -356,10 +356,11 @@ User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$APP_DIR/backend
 Environment="PATH=$APP_DIR/backend/venv/bin"
-# Use a dash before the path to ignore errors if the file is missing
+# Use a dash before the path to ignore errors if the file is missing and ensure directory exists
+ExecStartPre=/usr/bin/mkdir -p $APP_DIR/backend
 EnvironmentFile=-$APP_DIR/backend/.env
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn app.main:app \
-    --workers 3 --worker-class uvicorn.workers.UvicornWorker \
+    --workers 1 --worker-class uvicorn.workers.UvicornWorker \
     --bind 127.0.0.1:8000 --timeout 300
 Restart=always
 

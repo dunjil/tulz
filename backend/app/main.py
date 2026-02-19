@@ -87,8 +87,11 @@ async def lifespan(app: FastAPI):
     start_cleanup_scheduler()
 
     # Pre-load ML models in background (don't block startup)
-    import threading
-    threading.Thread(target=preload_ml_models, daemon=True).start()
+    if settings.debug:
+        import threading
+        threading.Thread(target=preload_ml_models, daemon=True).start()
+    else:
+        print("Skipping ML model preloading in production to save memory")
 
     yield
 
