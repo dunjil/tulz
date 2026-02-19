@@ -39,20 +39,33 @@ class WebPdfService:
             )
 
         async with async_playwright() as p:
-            # Launch browser
-            try:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-gpu",
-                    ],
-                )
-            except Exception as launch_err:
-                print(f"[PLAYWRIGHT ERROR] Failed to launch chromium: {launch_err}")
-                raise RuntimeError(f"Could not launch browser: {launch_err}")
+            # Launch browser with retries
+            browser = None
+            last_err = None
+            max_retries = 3
+            
+            for attempt in range(max_retries):
+                try:
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        timeout=60000, # 60s timeout for busy VPS
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-gpu",
+                            "--single-process", # Better for low memory
+                        ],
+                    )
+                    break 
+                except Exception as launch_err:
+                    last_err = launch_err
+                    print(f"[PLAYWRIGHT ATTEMPT {attempt+1}] Failed to launch chromium: {launch_err}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(1 * (attempt + 1)) # Backoff
+            
+            if not browser:
+                raise RuntimeError(f"Could not launch browser after {max_retries} attempts: {last_err}")
 
             try:
                 # Viewport and device emulation

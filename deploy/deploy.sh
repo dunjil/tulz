@@ -45,6 +45,11 @@ security_cleanup() {
     log "Hunting for processes using port 25 (SMTP)..."
     lsof -i :25 -t | xargs kill -9 2>/dev/null || true
     
+    # KILL zombie playwright/chromium processes
+    log "Cleaning up zombie browser processes..."
+    pkill -9 -f "headless_shell" || true
+    pkill -9 -f "chromium" || true
+    
     log "Security cleanup completed."
 }
 
