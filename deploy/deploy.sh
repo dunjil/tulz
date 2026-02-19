@@ -307,9 +307,10 @@ if ! $PIP_CMD -r $APP_DIR/backend/requirements.txt; then
     error "Backend requirements installation failed."
 fi
 
-# Install Playwright browsers (Chromium)
-log "Installing Playwright Chromium browser..."
-sudo -u $APP_USER $APP_DIR/backend/venv/bin/playwright install chromium
+# Install Playwright browsers (Chromium) and system dependencies
+log "Installing Playwright Chromium browser and system dependencies..."
+sudo $APP_DIR/backend/venv/bin/playwright install chromium
+sudo $APP_DIR/backend/venv/bin/playwright install-deps chromium
 
 # Database initialization/migration
 # We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
