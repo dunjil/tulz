@@ -237,6 +237,17 @@ fi
 step "5/10" "Applying environment configuration..."
 [ -f /tmp/backend.env ] && cp /tmp/backend.env $APP_DIR/backend/.env
 [ -f /tmp/frontend.env ] && cp /tmp/frontend.env $APP_DIR/frontend/.env.local
+
+# Robustness check: if .env is missing in the backend dir, try to restore from a backup if it exists
+if [ ! -f "$APP_DIR/backend/.env" ]; then
+    log "Backend .env missing. Searching for backup..."
+    BACKUP_ENV=$(find $APP_DIR -name ".env" | grep "bak" | head -n 1)
+    if [ -n "$BACKUP_ENV" ]; then
+        cp "$BACKUP_ENV" "$APP_DIR/backend/.env"
+        log "Restored .env from backup: $BACKUP_ENV"
+    fi
+fi
+
 chown $APP_USER:$APP_USER $APP_DIR/backend/.env $APP_DIR/frontend/.env.local
 chmod 600 $APP_DIR/backend/.env $APP_DIR/frontend/.env.local
 
@@ -345,7 +356,8 @@ User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$APP_DIR/backend
 Environment="PATH=$APP_DIR/backend/venv/bin"
-EnvironmentFile=$APP_DIR/backend/.env
+# Use a dash before the path to ignore errors if the file is missing
+EnvironmentFile=-$APP_DIR/backend/.env
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn app.main:app \
     --workers 3 --worker-class uvicorn.workers.UvicornWorker \
     --bind 127.0.0.1:8000 --timeout 300
