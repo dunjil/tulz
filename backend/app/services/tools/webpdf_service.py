@@ -40,15 +40,19 @@ class WebPdfService:
 
         async with async_playwright() as p:
             # Launch browser
-            browser = await p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                ],
-            )
+            try:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                    ],
+                )
+            except Exception as launch_err:
+                print(f"[PLAYWRIGHT ERROR] Failed to launch chromium: {launch_err}")
+                raise RuntimeError(f"Could not launch browser: {launch_err}")
 
             try:
                 # Viewport and device emulation

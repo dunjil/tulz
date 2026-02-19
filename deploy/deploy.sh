@@ -136,7 +136,8 @@ if [ "$FIRST_TIME" = true ]; then
         poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript \
         libjemalloc2 \
         libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libopenjp2-7-dev libsecret-1-dev libxml2-dev libxslt1-dev \
-        libgvpr2 libgbm1 libasound2
+        libgvpr2 libgbm1 libasound2 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+        libxcomposite1 libxdamage1 libxfixes3 libxrandr2
 
     # Python 3.12
     add-apt-repository -y ppa:deadsnakes/ppa
@@ -203,7 +204,9 @@ if [ "$FIRST_TIME" = true ]; then
         useradd -m -s /bin/bash $APP_USER
     fi
     mkdir -p $APP_DIR/{logs,tmp}
-    chown -R $APP_USER:$APP_USER $APP_DIR
+    # Also ensure the /tmp/toolhub dir (from config.py) is owned by us
+    mkdir -p /tmp/toolhub
+    chown -R $APP_USER:$APP_USER $APP_DIR /tmp/toolhub
 fi
 
 # 4. Extract Code
