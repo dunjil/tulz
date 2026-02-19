@@ -360,7 +360,7 @@ Environment="PATH=$APP_DIR/backend/venv/bin"
 ExecStartPre=/usr/bin/mkdir -p $APP_DIR/backend
 EnvironmentFile=-$APP_DIR/backend/.env
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn app.main:app \
-    --workers 1 --worker-class uvicorn.workers.UvicornWorker \
+    --workers 3 --worker-class uvicorn.workers.UvicornWorker \
     --bind 127.0.0.1:8000 --timeout 300
 Restart=always
 
