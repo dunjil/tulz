@@ -12,6 +12,10 @@ from reportlab.pdfgen import canvas
 class WebPdfService:
     """Service for converting websites to PDF."""
 
+    # Global semaphore to limit concurrent browser instances across all requests in one worker
+    # 5 concurrent browsers per worker (15 total for 3 workers) is safe for 8GB RAM
+    _semaphore = asyncio.Semaphore(5)
+
     async def convert(
         self,
         url: str,
@@ -31,151 +35,152 @@ class WebPdfService:
         Convert a website to PDF.
         Returns (pdf_bytes, page_count, title).
         """
-        try:
-            from playwright.async_api import async_playwright
-        except ImportError:
-            raise RuntimeError(
-                "Playwright is not installed. Run: pip install playwright && playwright install chromium"
-            )
-
-        async with async_playwright() as p:
-            # Launch browser with retries
-            browser = None
-            last_err = None
-            max_retries = 3
-            
-            for attempt in range(max_retries):
-                try:
-                    browser = await p.chromium.launch(
-                        headless=True,
-                        timeout=60000, # 60s timeout for busy VPS
-                        args=[
-                            "--no-sandbox",
-                            "--disable-setuid-sandbox",
-                            "--disable-dev-shm-usage",
-                            "--disable-gpu",
-                            "--single-process", # Better for low memory
-                        ],
-                    )
-                    break 
-                except Exception as launch_err:
-                    last_err = launch_err
-                    print(f"[PLAYWRIGHT ATTEMPT {attempt+1}] Failed to launch chromium: {launch_err}")
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(1 * (attempt + 1)) # Backoff
-            
-            if not browser:
-                raise RuntimeError(f"Could not launch browser after {max_retries} attempts: {last_err}")
-
+        async with self._semaphore:
             try:
-                # Viewport and device emulation
-                is_mobile = viewport_type == "mobile"
-                
-                if is_mobile:
-                    # Mobile: iPhone 14 style
-                    viewport = {"width": 844, "height": 390} if landscape else {"width": 390, "height": 844}
-                    user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
-                else:
-                    # Desktop: 1080p for landscape, 1440 width for portrait to ensure desktop layout
-                    # 1440px is safer than 1280px to avoid tablet/mobile breakpoints
-                    viewport = {"width": 1920, "height": 1080} if landscape else {"width": 1440, "height": 2036}
-                    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-                context = await browser.new_context(
-                    viewport=viewport,
-                    user_agent=user_agent,
-                    is_mobile=is_mobile,
-                    has_touch=is_mobile,
-                    device_scale_factor=1,
+                from playwright.async_api import async_playwright
+            except ImportError:
+                raise RuntimeError(
+                    "Playwright is not installed. Run: pip install playwright && playwright install chromium"
                 )
-                page = await context.new_page()
 
-                # BLOCK ADS & TRACKERS to speed up load time
-                async def intercept(route):
-                    # We NO LONGER block images here as it's too risky for quality
-                    excluded_resource_types = ["media", "font"] if not include_background else []
-                    if route.request.resource_type in (["analytics", "tracker", "advertising"] + excluded_resource_types) or \
-                       any(x in route.request.url for x in ["google-analytics.com", "googletagmanager.com", "facebook.net", "adroll.com"]):
-                        await route.abort()
-                    else:
-                        await route.continue_()
+            async with async_playwright() as p:
+                # Launch browser with retries
+                browser = None
+                last_err = None
+                max_retries = 3
                 
-                await page.route("**/*", intercept)
+                for attempt in range(max_retries):
+                    try:
+                        browser = await p.chromium.launch(
+                            headless=True,
+                            timeout=60000, # 60s timeout for busy VPS
+                            args=[
+                                "--no-sandbox",
+                                "--disable-setuid-sandbox",
+                                "--disable-dev-shm-usage",
+                                "--disable-gpu",
+                                "--single-process", # Better for low memory
+                            ],
+                        )
+                        break 
+                    except Exception as launch_err:
+                        last_err = launch_err
+                        print(f"[PLAYWRIGHT ATTEMPT {attempt+1}] Failed to launch chromium: {launch_err}")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(1 * (attempt + 1)) # Backoff
+                
+                if not browser:
+                    raise RuntimeError(f"Could not launch browser after {max_retries} attempts: {last_err}")
 
-                # Emulate screen media for desktop
-                await page.emulate_media(media="screen")
-
-                # Navigate to URL with safety fallback
-                # Some sites never reach 'networkidle', so we fallback to 'load' after 20s
                 try:
-                    await page.goto(url, wait_until="networkidle", timeout=30000)
-                except Exception as e:
-                    print(f"Network idle timeout, falling back to basic load: {e}")
-                    # If networkidle fails/takes too long, just wait for minimum load
-                    await page.goto(url, wait_until="load", timeout=15000)
-
-                # Wait for images to load (capped at 15s)
-                await self._wait_for_images(page, timeout_ms=15000)
-
-                # Wait for specific time to allow backend data to load
-                if wait_for > 0:
-                    await asyncio.sleep(wait_for / 1000)
-
-                # Trigger lazy-loaded content by scrolling if it's a full page capture
-                if full_page:
-                    await self._smart_scroll(page)
-                    # Small pause after scroll to let new items settle
-                    await asyncio.sleep(0.5)
-
-                # Get page title
-                title = await page.title()
-
-                # Generate PDF
-                # IMPORTANT: page.pdf() re-layouts the page based on width/height, 
-                # ignoring the viewport. For Desktop view, we MUST provide a desktop-width PDF size.
-                pdf_options = {
-                    "print_background": include_background,
-                    "scale": scale,
-                    "landscape": landscape,
-                    "margin": {
-                        "top": margin_top,
-                        "bottom": margin_bottom,
-                        "left": margin_left,
-                        "right": margin_right,
-                    },
-                }
-
-                if viewport_type == "desktop":
-                    # Use desktop dimensions to prevent mobile layout re-triggering during PDF gen
-                    if landscape:
-                        pdf_options["width"] = "1920px"
-                        pdf_options["height"] = "1080px"
-                    else:
-                        pdf_options["width"] = "1440px"
-                        pdf_options["height"] = "2036px" # Maintains A4 aspect ratio 
+                    # Viewport and device emulation
+                    is_mobile = viewport_type == "mobile"
                     
-                    # If not full page, we only take the first "screen"
-                    if not full_page:
-                        # Capture only first page of these dimensions
-                        pdf_options["page_ranges"] = "1"
-                else:
-                    pdf_options["format"] = format
-                    if not full_page:
-                        pdf_options["page_ranges"] = "1"
+                    if is_mobile:
+                        # Mobile: iPhone 14 style
+                        viewport = {"width": 844, "height": 390} if landscape else {"width": 390, "height": 844}
+                        user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+                    else:
+                        # Desktop: 1080p for landscape, 1440 width for portrait to ensure desktop layout
+                        # 1440px is safer than 1280px to avoid tablet/mobile breakpoints
+                        viewport = {"width": 1920, "height": 1080} if landscape else {"width": 1440, "height": 2036}
+                        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-                pdf_bytes = await page.pdf(**pdf_options)
+                    context = await browser.new_context(
+                        viewport=viewport,
+                        user_agent=user_agent,
+                        is_mobile=is_mobile,
+                        has_touch=is_mobile,
+                        device_scale_factor=1,
+                    )
+                    page = await context.new_page()
 
-                # COMPRESS PDF - Aggressive optimization
-                pdf_bytes = self._compress_pdf(pdf_bytes)
+                    # BLOCK ADS & TRACKERS to speed up load time
+                    async def intercept(route):
+                        # We NO LONGER block images here as it's too risky for quality
+                        excluded_resource_types = ["media", "font"] if not include_background else []
+                        if route.request.resource_type in (["analytics", "tracker", "advertising"] + excluded_resource_types) or \
+                           any(x in route.request.url for x in ["google-analytics.com", "googletagmanager.com", "facebook.net", "adroll.com"]):
+                            await route.abort()
+                        else:
+                            await route.continue_()
+                    
+                    await page.route("**/*", intercept)
 
-                # Count pages
-                pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
-                page_count = len(pdf_reader.pages)
+                    # Emulate screen media for desktop
+                    await page.emulate_media(media="screen")
 
-                return pdf_bytes, page_count, title
+                    # Navigate to URL with safety fallback
+                    # Some sites never reach 'networkidle', so we fallback to 'load' after 20s
+                    try:
+                        await page.goto(url, wait_until="networkidle", timeout=30000)
+                    except Exception as e:
+                        print(f"Network idle timeout, falling back to basic load: {e}")
+                        # If networkidle fails/takes too long, just wait for minimum load
+                        await page.goto(url, wait_until="load", timeout=15000)
 
-            finally:
-                await browser.close()
+                    # Wait for images to load (capped at 15s)
+                    await self._wait_for_images(page, timeout_ms=15000)
+
+                    # Wait for specific time to allow backend data to load
+                    if wait_for > 0:
+                        await asyncio.sleep(wait_for / 1000)
+
+                    # Trigger lazy-loaded content by scrolling if it's a full page capture
+                    if full_page:
+                        await self._smart_scroll(page)
+                        # Small pause after scroll to let new items settle
+                        await asyncio.sleep(0.5)
+
+                    # Get page title
+                    title = await page.title()
+
+                    # Generate PDF
+                    # IMPORTANT: page.pdf() re-layouts the page based on width/height, 
+                    # ignoring the viewport. For Desktop view, we MUST provide a desktop-width PDF size.
+                    pdf_options = {
+                        "print_background": include_background,
+                        "scale": scale,
+                        "landscape": landscape,
+                        "margin": {
+                            "top": margin_top,
+                            "bottom": margin_bottom,
+                            "left": margin_left,
+                            "right": margin_right,
+                        },
+                    }
+
+                    if viewport_type == "desktop":
+                        # Use desktop dimensions to prevent mobile layout re-triggering during PDF gen
+                        if landscape:
+                            pdf_options["width"] = "1920px"
+                            pdf_options["height"] = "1080px"
+                        else:
+                            pdf_options["width"] = "1440px"
+                            pdf_options["height"] = "2036px" # Maintains A4 aspect ratio 
+                        
+                        # If not full page, we only take the first "screen"
+                        if not full_page:
+                            # Capture only first page of these dimensions
+                            pdf_options["page_ranges"] = "1"
+                    else:
+                        pdf_options["format"] = format
+                        if not full_page:
+                            pdf_options["page_ranges"] = "1"
+
+                    pdf_bytes = await page.pdf(**pdf_options)
+
+                    # COMPRESS PDF - Aggressive optimization
+                    pdf_bytes = self._compress_pdf(pdf_bytes)
+
+                    # Count pages
+                    pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+                    page_count = len(pdf_reader.pages)
+
+                    return pdf_bytes, page_count, title
+
+                finally:
+                    await browser.close()
 
     def _compress_pdf(self, pdf_bytes: bytes) -> bytes:
         """
