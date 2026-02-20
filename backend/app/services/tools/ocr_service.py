@@ -83,7 +83,8 @@ class OCRService:
     def __init__(self):
         self.temp_dir = settings.temp_file_dir
         os.makedirs(self.temp_dir, exist_ok=True)
-        self._executor = ThreadPoolExecutor(max_workers=4)
+        self._executor = ThreadPoolExecutor(max_workers=2) # Reduced workers
+        self._semaphore = asyncio.Semaphore(2) # Limit concurrent OCR tasks
 
     async def extract_text_from_image(
         self,
@@ -120,16 +121,17 @@ class OCRService:
                 message=f"File too large. {tier.title()} tier limit: {limits['max_file_size_mb']}MB"
             )
 
-        # Run OCR in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            self._executor,
-            self._sync_extract_text_from_image,
-            image_bytes,
-            language,
-            limits,
-            use_preprocessing and limits["preprocessing"],
-        )
+        # Run OCR with semaphore and in thread pool to avoid blocking
+        async with self._semaphore:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                self._executor,
+                self._sync_extract_text_from_image,
+                image_bytes,
+                language,
+                limits,
+                use_preprocessing and limits["preprocessing"],
+            )
 
         return result
 
@@ -259,15 +261,16 @@ class OCRService:
                 message=f"PDF has {page_count} pages. {tier.title()} tier limit: {limits['max_pdf_pages']} pages"
             )
 
-        # Run OCRmyPDF in thread pool
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            self._executor,
-            self._sync_create_searchable_pdf,
-            pdf_bytes,
-            language,
-            page_count,
-        )
+        # Run OCRmyPDF with semaphore and in thread pool
+        async with self._semaphore:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                self._executor,
+                self._sync_create_searchable_pdf,
+                pdf_bytes,
+                language,
+                page_count,
+            )
 
         return result
 
@@ -380,16 +383,17 @@ class OCRService:
                 message=f"PDF has {page_count} pages. {tier.title()} tier limit: {limits['max_pdf_pages']} pages"
             )
 
-        # Run PDF OCR in thread pool
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            self._executor,
-            self._sync_extract_text_from_pdf,
-            pdf_bytes,
-            language,
-            limits,
-            use_preprocessing and limits["preprocessing"],
-        )
+        # Run PDF OCR with semaphore and in thread pool
+        async with self._semaphore:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                self._executor,
+                self._sync_extract_text_from_pdf,
+                pdf_bytes,
+                language,
+                limits,
+                use_preprocessing and limits["preprocessing"],
+            )
 
         return result
 
@@ -400,31 +404,39 @@ class OCRService:
         limits: dict,
         use_preprocessing: bool,
     ) -> dict:
-        """Synchronous PDF text extraction (runs in thread pool)."""
+        """Synchronous PDF text extraction (runs in thread pool).
+        
+        Optimized to process pages one-by-one to minimize memory usage.
+        """
         import pytesseract
-        from pdf2image import convert_from_bytes
+        import fitz # PyMuPDF
+        import gc
+        from PIL import Image
 
         try:
-            # Convert PDF pages to images
-            images = convert_from_bytes(
-                pdf_bytes,
-                dpi=200,  # Good balance of quality vs speed
-                thread_count=1,  # Limit CPU usage
-            )
-
+            # Open PDF with PyMuPDF
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            
             # Extract text from each page
             all_text = []
             total_confidence = 0
             confidence_count = 0
+            page_count = len(doc)
 
-            for i, image in enumerate(images):
+            for i in range(page_count):
+                page = doc.load_page(i)
+                # Render page to image (pixmap)
+                pix = page.get_pixmap(dpi=200)
+                # Convert to PIL Image
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                
                 # Preprocess if enabled
                 if use_preprocessing:
-                    image = preprocess_image(image)
+                    img = preprocess_image(img)
 
                 # OCR the page
                 text = pytesseract.image_to_string(
-                    image,
+                    img,
                     lang=language,
                     timeout=limits["timeout_seconds"],
                 )
@@ -432,7 +444,7 @@ class OCRService:
 
                 # Get confidence
                 data = pytesseract.image_to_data(
-                    image,
+                    img,
                     lang=language,
                     output_type=pytesseract.Output.DICT,
                     timeout=limits["timeout_seconds"],
@@ -441,6 +453,11 @@ class OCRService:
                 if confidences:
                     total_confidence += sum(confidences)
                     confidence_count += len(confidences)
+                
+                # Explicit cleanup for each page
+                del img
+                del pix
+                gc.collect()
 
             combined_text = "\n\n".join(all_text)
             avg_confidence = total_confidence / confidence_count if confidence_count else 0
@@ -457,13 +474,16 @@ class OCRService:
 
             # Detect language
             detected_lang = detect_language_from_text(combined_text)
+            
+            # Close document
+            doc.close()
 
             return {
                 "success": True,
                 "text": combined_text,
                 "word_count": word_count,
                 "char_count": char_count,
-                "page_count": len(images),
+                "page_count": page_count,
                 "confidence": round(avg_confidence, 1),
                 "language": language,
                 "language_name": SUPPORTED_LANGUAGES.get(language, language),

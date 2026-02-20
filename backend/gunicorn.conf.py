@@ -9,12 +9,14 @@ backlog = 2048
 
 # Worker processes
 # Formula: (2 × CPU cores) + 1 for I/O bound apps
-# Use CPU cores for CPU-bound apps
-workers = int(os.getenv("WORKERS", multiprocessing.cpu_count() * 2 + 1))
+# For 8GB RAM with heavy ML/Chromium tools, a more conservative (CPU cores + 1) is safer
+import multiprocessing
+cpu_count = multiprocessing.cpu_count()
+workers = int(os.getenv("WORKERS", min(cpu_count + 1, 4))) # Cap at 4 workers for 8GB RAM
 worker_class = "uvicorn.workers.UvicornWorker"
 worker_connections = 1000
-max_requests = 5000  # Restart workers after this many requests (prevents memory leaks)
-max_requests_jitter = 500  # Add randomness to prevent all workers restarting at once
+max_requests = 1000  # Restart workers after this many requests (prevents memory leaks)
+max_requests_jitter = 100  # Add randomness to prevent all workers restarting at once
 timeout = 120  # Kill workers that don't respond within this time
 keepalive = 5  # Seconds to wait for requests on a Keep-Alive connection
 graceful_timeout = 30  # Timeout for graceful worker restart
