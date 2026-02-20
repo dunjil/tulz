@@ -36,10 +36,10 @@ class WebPdfService:
         Returns (pdf_bytes, page_count, title).
         """
         async with self._semaphore:
-            max_conversion_attempts = 2
-            last_conversion_err = None
+            max_attempts = 3
+            last_err = None
             
-            for conv_attempt in range(max_conversion_attempts):
+            for attempt in range(max_attempts):
                 try:
                     try:
                         from playwright.async_api import async_playwright, Error as PlaywrightError
@@ -49,38 +49,29 @@ class WebPdfService:
                         )
 
                     async with async_playwright() as p:
-                        # Launch browser with retries
-                        browser = None
-                        last_launch_err = None
-                        max_launch_attempts = 3
-                        
-                        for attempt in range(max_launch_attempts):
-                            try:
-                                # VPS Optimizations: 
-                                # --js-flags: Limit V8 memory to prevent OOM
-                                # --disable-dev-shm-usage: Use /tmp instead of /dev/shm (stable on small VPS)
-                                # --single-process: Reduce process overhead
-                                browser = await p.chromium.launch(
-                                    headless=True,
-                                    timeout=60000, 
-                                    args=[
-                                        "--no-sandbox",
-                                        "--disable-setuid-sandbox",
-                                        "--disable-dev-shm-usage",
-                                        "--disable-gpu",
-                                        "--single-process",
-                                        "--js-flags=--max-old-space-size=512", # Limit memory per instance
-                                    ],
-                                )
-                                break 
-                            except Exception as launch_err:
-                                last_launch_err = launch_err
-                                print(f"[PLAYWRIGHT LAUNCH ATTEMPT {attempt+1}] Failed: {launch_err}")
-                                if attempt < max_launch_attempts - 1:
-                                    await asyncio.sleep(2 * (attempt + 1)) # Incremental backoff
-                        
-                        if not browser:
-                            raise RuntimeError(f"Could not launch browser after {max_launch_attempts} attempts: {last_launch_err}")
+                        # Launch browser
+                        # VPS Optimizations: 
+                        # --js-flags: Limit V8 memory to prevent OOM
+                        # --disable-dev-shm-usage: Use /tmp instead of /dev/shm (stable on small VPS)
+                        # We REMOVED --single-process as it causes stability issues/crashes
+                        try:
+                            browser = await p.chromium.launch(
+                                headless=True,
+                                timeout=60000, 
+                                args=[
+                                    "--no-sandbox",
+                                    "--disable-setuid-sandbox",
+                                    "--disable-dev-shm-usage",
+                                    "--disable-gpu",
+                                    "--js-flags=--max-old-space-size=512",
+                                ],
+                            )
+                        except Exception as launch_err:
+                            print(f"[PLAYWRIGHT LAUNCH ATTEMPT {attempt+1}] Failed: {launch_err}")
+                            if attempt < max_attempts - 1:
+                                await asyncio.sleep(2 * (attempt + 1))
+                                continue
+                            raise launch_err
 
                         try:
                             # Viewport and device emulation
@@ -185,7 +176,7 @@ class WebPdfService:
                                 if not full_page: pdf_options["page_ranges"] = "1"
 
                             pdf_bytes = await page.pdf(**pdf_options)
-                            pdf_bytes = self._compress_pdf(pdf_bytes, page) # Pass page for image replacement
+                            pdf_bytes = self._compress_pdf(pdf_bytes, page)
 
                             pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
                             page_count = len(pdf_reader.pages)
@@ -193,26 +184,25 @@ class WebPdfService:
                             return pdf_bytes, page_count, title
 
                         finally:
-                            # Use try-except for close as the driver might be gone
                             try:
                                 await browser.close()
                             except:
                                 pass
                 
                 except (PlaywrightError, Exception) as e:
-                    last_conversion_err = e
+                    last_err = e
                     err_msg = str(e)
-                    print(f"[CONVERSION ATTEMPT {conv_attempt+1}] Failed: {err_msg}")
+                    print(f"[CONVERSION ATTEMPT {attempt+1}] Failed: {err_msg}")
                     
-                    # If it's a driver crash/connection error, retry the whole block
-                    retryable_errors = ["Connection closed", "handler is closed", "Target closed", "Browser closed"]
-                    if any(x in err_msg for x in retryable_errors) and conv_attempt < max_conversion_attempts - 1:
+                    # If it's a driver crash or target closed, retry with fresh driver
+                    retryable_errors = ["Connection closed", "handler is closed", "Target closed", "Browser closed", "Target page, context or browser has been closed"]
+                    if any(x in err_msg for x in retryable_errors) and attempt < max_attempts - 1:
                         await asyncio.sleep(2)
                         continue
                     else:
                         raise e
             
-            raise last_conversion_err or RuntimeError("Conversion failed unexpectedly")
+            raise last_err or RuntimeError("Conversion failed unexpectedly")
 
     def _compress_pdf(self, pdf_bytes: bytes, page=None) -> bytes:
         """
