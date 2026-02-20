@@ -228,6 +228,12 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
         mv $APP_DIR/backend/venv /tmp/toolhub-venv-preserve
     fi
 
+    # Preserve node_modules for frontend to speed up build
+    if [ -d "$APP_DIR/frontend/node_modules" ]; then
+        log "Preserving existing node_modules..."
+        mv $APP_DIR/frontend/node_modules /tmp/toolhub-node-modules-preserve
+    fi
+
     # Backup & Clean
     [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak_$(date +%F_%T)
     [ -d "$APP_DIR/frontend" ] && mv $APP_DIR/frontend $APP_DIR/frontend.bak_$(date +%F_%T)
@@ -238,6 +244,11 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
     if [ -d /tmp/toolhub-venv-preserve ]; then
         log "Restoring preserved venv..."
         mv /tmp/toolhub-venv-preserve $APP_DIR/backend/venv
+    fi
+
+    if [ -d /tmp/toolhub-node-modules-preserve ]; then
+        log "Restoring preserved node_modules..."
+        mv /tmp/toolhub-node-modules-preserve $APP_DIR/frontend/node_modules
     fi
 
     chown -R $APP_USER:$APP_USER $APP_DIR
@@ -352,9 +363,15 @@ fi
 step "8/10" "Building frontend..."
 # Ensure ownership is correct before building
 chown -R $APP_USER:$APP_USER $APP_DIR/frontend
-# Remove .next to prevent ENOENT errors with trace files during build
+# Preserve .next/cache if possible? No, we delete .next.
 sudo -u $APP_USER rm -rf $APP_DIR/frontend/.next
-sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && npm install"
+
+log "Installing frontend dependencies..."
+if ! sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && npm install > /tmp/npm_install.log 2>&1"; then
+    warn "npm install failed. Output log:"
+    cat /tmp/npm_install.log
+    error "Frontend dependency installation failed."
+fi
 sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
 
 # 9. Systemd Services
