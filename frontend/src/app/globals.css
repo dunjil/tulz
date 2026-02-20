@@ -70,3 +70,26 @@
     font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 }
+@layer utilities {
+  .animate-bounce-subtle {
+    animation: bounce-subtle 3s infinite;
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(-5%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.cv-preview-paper {
+  position: relative;
+  background-color: white;
+  background-image: url("https://www.transparenttextures.com/patterns/paper-fibers.png");
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
