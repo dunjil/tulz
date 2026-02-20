@@ -283,7 +283,7 @@ export default function CvGeneratorPage() {
             ) : (
               <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                 <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>3 Free Templates</span>
+                <span>All Templates Free</span>
               </div>
             )}
           </div>
@@ -307,7 +307,7 @@ export default function CvGeneratorPage() {
                   <DialogHeader>
                     <DialogTitle>Choose a Sample CV</DialogTitle>
                     <DialogDescription>
-                      Select a professional sample to get started quickly. Pro samples require a subscription.
+                      Select a professional sample to get started quickly.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-3 mt-4">
@@ -338,16 +338,9 @@ export default function CvGeneratorPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <h4 className="font-medium">{sample.name}</h4>
-                              {sample.is_free ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                  Free
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                                  <Crown className="w-2.5 h-2.5" />
-                                  Pro
-                                </span>
-                              )}
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                Free
+                              </span>
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {sample.description}
@@ -386,16 +379,9 @@ export default function CvGeneratorPage() {
                     <SelectItem key={t.id} value={t.id}>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{t.name}</span>
-                        {t.is_free ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            Free
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                            <Crown className="w-2.5 h-2.5" />
-                            Pro
-                          </span>
-                        )}
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          Free
+                        </span>
                       </div>
                     </SelectItem>
                   )) || (

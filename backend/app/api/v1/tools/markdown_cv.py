@@ -1,9 +1,6 @@
 """Markdown to CV/Resume PDF endpoints.
 
-Hybrid free/pro model:
-- FREE: Modern, Professional, Minimal templates + Software Engineer sample
-- PRO: All 10 templates + All 10 sample CVs
-
+All templates and sample CVs are FREE for all users.
 Usage is tracked for analytics purposes.
 """
 
@@ -30,11 +27,9 @@ router = APIRouter()
 TEMP_DIR = settings.temp_file_dir
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# Free templates available to all users
-FREE_TEMPLATES = {"modern", "professional", "minimal"}
-
-# Free samples available to all users
-FREE_SAMPLES = {"software_engineer"}
+# All templates and samples are free
+FREE_TEMPLATES = {"modern", "professional", "minimal", "creative", "executive", "tech", "academic", "elegant", "compact", "dark"}
+FREE_SAMPLES = {"software_engineer", "product_manager", "ux_designer", "data_scientist", "marketing_manager", "project_manager", "financial_analyst", "hr_manager", "consultant", "nurse"}
 
 # CV Templates with professional styling
 CV_TEMPLATES = {
@@ -99,7 +94,7 @@ CV_TEMPLATES = {
     "creative": {
         "name": "Creative",
         "description": "Bold design for creative professionals",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 15mm; }
             body { font-family: 'Segoe UI', 'Roboto', sans-serif; line-height: 1.4; color: #2d3748; margin: 0; padding: 0; font-size: 10pt; }
@@ -119,7 +114,7 @@ CV_TEMPLATES = {
     "executive": {
         "name": "Executive",
         "description": "Sophisticated design for senior positions",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 18mm 22mm; }
             body { font-family: 'Cambria', Georgia, serif; line-height: 1.5; color: #1f2937; margin: 0; padding: 0; font-size: 10.5pt; }
@@ -137,7 +132,7 @@ CV_TEMPLATES = {
     "tech": {
         "name": "Tech",
         "description": "Modern design for tech professionals",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 15mm 18mm; }
             body { font-family: 'SF Pro Display', -apple-system, 'Segoe UI', sans-serif; line-height: 1.4; color: #1e293b; margin: 0; padding: 0; font-size: 10pt; background: #fff; }
@@ -157,7 +152,7 @@ CV_TEMPLATES = {
     "academic": {
         "name": "Academic",
         "description": "Formal style for academic and research positions",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 20mm 25mm; }
             body { font-family: 'Times New Roman', Times, serif; line-height: 1.5; color: #000; margin: 0; padding: 0; font-size: 11pt; }
@@ -175,7 +170,7 @@ CV_TEMPLATES = {
     "elegant": {
         "name": "Elegant",
         "description": "Refined and sophisticated design",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 18mm 22mm; }
             body { font-family: 'Garamond', 'Palatino', serif; line-height: 1.5; color: #2c2c2c; margin: 0; padding: 0; font-size: 10.5pt; }
@@ -193,7 +188,7 @@ CV_TEMPLATES = {
     "compact": {
         "name": "Compact",
         "description": "Space-efficient layout for detailed CVs",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 12mm 15mm; }
             body { font-family: 'Arial Narrow', Arial, sans-serif; line-height: 1.3; color: #333; margin: 0; padding: 0; font-size: 9pt; }
@@ -211,7 +206,7 @@ CV_TEMPLATES = {
     "dark": {
         "name": "Dark Mode",
         "description": "Modern dark theme for digital-first CVs",
-        "is_free": False,
+        "is_free": True,
         "css": """
             @page { size: A4; margin: 15mm 20mm; }
             body { font-family: 'Inter', 'Segoe UI', sans-serif; line-height: 1.4; color: #e2e8f0; margin: 0; padding: 0; font-size: 10pt; background: #0f172a; }
@@ -314,7 +309,7 @@ Experienced software engineer with 8+ years developing scalable web applications
     "product_manager": {
         "name": "Product Manager",
         "description": "Template for product managers and product owners",
-        "is_free": False,
+        "is_free": True,
         "content": """# Sarah Johnson
 **Senior Product Manager**
 
@@ -390,7 +385,7 @@ Strategic product manager with 7+ years of experience launching successful B2B a
     "ux_designer": {
         "name": "UX Designer",
         "description": "Template for UX/UI designers",
-        "is_free": False,
+        "is_free": True,
         "content": """# Emily Chen
 **Senior UX Designer**
 
@@ -465,7 +460,7 @@ Created comprehensive guidelines adopted company-wide
     "data_scientist": {
         "name": "Data Scientist",
         "description": "Template for data scientists and ML engineers",
-        "is_free": False,
+        "is_free": True,
         "content": """# Michael Park
 **Senior Data Scientist**
 
@@ -548,7 +543,7 @@ Data scientist with 5+ years of experience building machine learning models and 
     "marketing_manager": {
         "name": "Marketing Manager",
         "description": "Template for marketing professionals",
-        "is_free": False,
+        "is_free": True,
         "content": """# Jessica Williams
 **Senior Marketing Manager**
 
@@ -631,7 +626,7 @@ Results-driven marketing manager with 8+ years of experience in digital marketin
     "project_manager": {
         "name": "Project Manager",
         "description": "Template for project and program managers",
-        "is_free": False,
+        "is_free": True,
         "content": """# David Thompson
 **Senior Project Manager, PMP**
 
@@ -717,7 +712,7 @@ PMP-certified project manager with 10+ years leading complex technical projects 
     "financial_analyst": {
         "name": "Financial Analyst",
         "description": "Template for finance professionals",
-        "is_free": False,
+        "is_free": True,
         "content": """# Amanda Rodriguez
 **Senior Financial Analyst**
 
@@ -801,7 +796,7 @@ CFA charterholder and senior financial analyst with 7+ years in investment banki
     "hr_manager": {
         "name": "HR Manager",
         "description": "Template for human resources professionals",
-        "is_free": False,
+        "is_free": True,
         "content": """# Rachel Kim
 **Senior HR Manager**
 
@@ -881,7 +876,7 @@ Strategic HR professional with 9+ years of experience in talent acquisition, emp
     "consultant": {
         "name": "Management Consultant",
         "description": "Template for consultants and advisors",
-        "is_free": False,
+        "is_free": True,
         "content": """# James Wilson
 **Senior Management Consultant**
 
@@ -967,7 +962,7 @@ Strategy consultant with 8+ years at top-tier consulting firms. Expertise in dig
     "nurse": {
         "name": "Healthcare Professional",
         "description": "Template for nurses and healthcare workers",
-        "is_free": False,
+        "is_free": True,
         "content": """# Maria Gonzalez, RN, BSN
 **Registered Nurse - Critical Care**
 
