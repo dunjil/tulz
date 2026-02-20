@@ -51,25 +51,31 @@ class UsageService:
         # Everyone gets unlimited access now
         tier = "pro"
 
-        # Get country from IP (non-blocking, best effort)
-        country_code, country_name = await GeoIPService.get_country(ip_address)
+        try:
+            # Get country from IP (non-blocking, best effort)
+            country_code, country_name = await GeoIPService.get_country(ip_address)
 
-        # Record usage
-        history = UsageHistory(
-            user_id=user.id if user else None,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            country_code=country_code,
-            country_name=country_name,
-            tool=tool,
-            operation=operation,
-            input_metadata=input_metadata,
-            tier_at_use=tier,
-        )
-        self.session.add(history)
-
-        await self.session.flush()
-        return history, tier
+            # Record usage
+            history = UsageHistory(
+                user_id=user.id if user else None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                country_code=country_code,
+                country_name=country_name,
+                tool=tool,
+                operation=operation,
+                input_metadata=input_metadata,
+                tier_at_use=tier,
+            )
+            self.session.add(history)
+            await self.session.flush()
+            return history, tier
+        except Exception as e:
+            # Analytics failure should NOT crash the tool in pro/unlimited mode
+            print(f"[USAGE-SERVICE ERROR] Failed to record usage: {e}")
+            # Return a "dummy" history object that won't crash when passed to complete_usage
+            dummy_history = UsageHistory(tool=tool, operation=operation)
+            return dummy_history, tier
 
     async def complete_usage(
         self,
@@ -79,12 +85,19 @@ class UsageService:
         success: bool = True,
         error_message: Optional[str] = None,
     ) -> UsageHistory:
-        """Update usage history with completion info."""
-        history.processing_time_ms = processing_time_ms
-        history.output_metadata = output_metadata
-        history.success = success
-        history.error_message = error_message
-        await self.session.flush()
+        try:
+            # If id is None, it's our dummy object from a failed check_and_record_usage
+            if history.id is None:
+                return history
+
+            history.processing_time_ms = processing_time_ms
+            history.output_metadata = output_metadata
+            history.success = success
+            history.error_message = error_message
+            await self.session.flush()
+        except Exception as e:
+            print(f"[USAGE-SERVICE ERROR] Failed to complete usage: {e}")
+            
         return history
 
     async def get_remaining_uses(
@@ -257,25 +270,29 @@ class UsageService:
         """
         tier = "free"
 
-        # Get country from IP (non-blocking, best effort)
-        country_code, country_name = await GeoIPService.get_country(ip_address)
+        try:
+            # Get country from IP (non-blocking, best effort)
+            country_code, country_name = await GeoIPService.get_country(ip_address)
 
-        # Record usage
-        history = UsageHistory(
-            user_id=user.id if user else None,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            country_code=country_code,
-            country_name=country_name,
-            tool=tool,
-            operation=operation,
-            input_metadata=input_metadata,
-            output_metadata=output_metadata,
-            processing_time_ms=processing_time_ms,
-            tier_at_use=tier,
-            success=success,
-            error_message=error_message,
-        )
-        self.session.add(history)
-        await self.session.flush()
-        return history
+            # Record usage
+            history = UsageHistory(
+                user_id=user.id if user else None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                country_code=country_code,
+                country_name=country_name,
+                tool=tool,
+                operation=operation,
+                input_metadata=input_metadata,
+                output_metadata=output_metadata,
+                processing_time_ms=processing_time_ms,
+                tier_at_use=tier,
+                success=success,
+                error_message=error_message,
+            )
+            self.session.add(history)
+            await self.session.flush()
+            return history
+        except Exception as e:
+            print(f"[USAGE-SERVICE ERROR] Failed to record analytics: {e}")
+            return UsageHistory(tool=tool, operation=operation)
