@@ -365,13 +365,19 @@ User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$APP_DIR/backend
 Environment="PATH=$APP_DIR/backend/venv/bin"
-# Use a dash before the path to ignore errors if the file is missing and ensure directory exists
+# Ensure directory exists
 ExecStartPre=/usr/bin/mkdir -p $APP_DIR/backend
 EnvironmentFile=-$APP_DIR/backend/.env
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn app.main:app \
     --workers 3 --worker-class uvicorn.workers.UvicornWorker \
     --bind 127.0.0.1:8000 --timeout 300
 Restart=always
+RestartSec=5
+# Give the app more time to start/stop before systemd kills it
+TimeoutStartSec=60
+TimeoutStopSec=60
+# KillMode=mixed allows Gunicorn to try to shut down workers gracefully
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target
@@ -399,14 +405,25 @@ systemctl restart tulz-api tulz-web
 
 # 10. Health Verification
 step "10/11" "Verifying service health..."
-log "Waiting for services to settle..."
-sleep 5
+log "Waiting for services to settle (with retries)..."
 
-# Verify Backend
-if curl -s -f http://127.0.0.1:8000/health > /dev/null; then
-    log "Backend API is UP and HEALTHY."
-else
-    warn "Backend API failed health check. Inspecting logs..."
+# Robust Health Check Loop for Backend
+MAX_RETRIES=6
+RETRY_DELAY=5
+BACKEND_UP=false
+
+for i in $(seq 1 $MAX_RETRIES); do
+    log "Backend health check attempt $i/$MAX_RETRIES..."
+    if curl -s -f http://127.0.0.1:8000/health > /dev/null; then
+        log "Backend API is UP and HEALTHY."
+        BACKEND_UP=true
+        break
+    fi
+    sleep $RETRY_DELAY
+done
+
+if [ "$BACKEND_UP" = false ]; then
+    warn "Backend API failed health check after $(($MAX_RETRIES * $RETRY_DELAY))s. Inspecting logs..."
     journalctl -u tulz-api.service -n 50 --no-pager
     error "Backend failed to start correctly."
 fi
