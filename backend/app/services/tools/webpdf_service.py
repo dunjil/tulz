@@ -40,167 +40,157 @@ class WebPdfService:
             last_err = None
             
             for attempt in range(max_attempts):
+                browser = None
+                playwright = None
                 try:
+                    from playwright.async_api import async_playwright, Error as PlaywrightError
+                    
+                    playwright = await async_playwright().start()
+                    
+                    # Launch browser with stability flags
+                    # --no-zygote: Reduces process management overhead (good for low memory)
+                    # --disable-extensions: Speed and stability
+                    # --js-flags: Restrict V8 heap
                     try:
-                        from playwright.async_api import async_playwright, Error as PlaywrightError
-                    except ImportError:
-                        raise RuntimeError(
-                            "Playwright is not installed. Run: pip install playwright && playwright install chromium"
+                        browser = await playwright.chromium.launch(
+                            headless=True,
+                            timeout=60000, 
+                            args=[
+                                "--no-sandbox",
+                                "--disable-setuid-sandbox",
+                                "--disable-dev-shm-usage",
+                                "--disable-gpu",
+                                "--no-zygote",
+                                "--disable-extensions",
+                                "--js-flags=--max-old-space-size=512",
+                            ],
                         )
+                    except Exception as launch_err:
+                        print(f"[PLAYWRIGHT] Launch attempt {attempt+1} failed: {launch_err}")
+                        raise launch_err
 
-                    async with async_playwright() as p:
-                        # Launch browser
-                        # VPS Optimizations: 
-                        # --js-flags: Limit V8 memory to prevent OOM
-                        # --disable-dev-shm-usage: Use /tmp instead of /dev/shm (stable on small VPS)
-                        # We REMOVED --single-process as it causes stability issues/crashes
+                    # Viewport and device emulation
+                    is_mobile = viewport_type == "mobile"
+                    if is_mobile:
+                        viewport = {"width": 844, "height": 390} if landscape else {"width": 390, "height": 844}
+                        user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+                    else:
+                        viewport = {"width": 1920, "height": 1080} if landscape else {"width": 1440, "height": 2036}
+                        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+                    context = await browser.new_context(
+                        viewport=viewport,
+                        user_agent=user_agent,
+                        is_mobile=is_mobile,
+                        has_touch=is_mobile,
+                        device_scale_factor=1,
+                    )
+                    page = await context.new_page()
+
+                    # Navigation logic... (rest of the logic inside the same try block)
+                    async def intercept(route):
+                        excluded_resource_types = ["media", "font"] if not include_background else []
+                        if route.request.resource_type in (["analytics", "tracker", "advertising"] + excluded_resource_types) or \
+                           any(x in route.request.url for x in ["google-analytics.com", "googletagmanager.com", "facebook.net", "adroll.com"]):
+                            await route.abort()
+                        else:
+                            await route.continue_()
+                    
+                    await page.route("**/*", intercept)
+                    await page.emulate_media(media="screen")
+
+                    success = False
+                    navigation_errors = []
+                    urls_to_try = [url]
+                    
+                    from urllib.parse import urlparse
+                    parsed = urlparse(url)
+                    if parsed.netloc and not parsed.netloc.startswith("www."):
+                        parts = parsed.netloc.split(".")
+                        if len(parts) == 2 or (len(parts) == 3 and parts[-1] in ["com", "net", "org", "edu", "gov"]):
+                             www_url = parsed._replace(netloc=f"www.{parsed.netloc}").geturl()
+                             urls_to_try.append(www_url)
+
+                    for current_url in urls_to_try:
                         try:
-                            browser = await p.chromium.launch(
-                                headless=True,
-                                timeout=60000, 
-                                args=[
-                                    "--no-sandbox",
-                                    "--disable-setuid-sandbox",
-                                    "--disable-dev-shm-usage",
-                                    "--disable-gpu",
-                                    "--js-flags=--max-old-space-size=512",
-                                ],
-                            )
-                        except Exception as launch_err:
-                            print(f"[PLAYWRIGHT LAUNCH ATTEMPT {attempt+1}] Failed: {launch_err}")
-                            if attempt < max_attempts - 1:
-                                await asyncio.sleep(2 * (attempt + 1))
-                                continue
-                            raise launch_err
-
-                        try:
-                            # Viewport and device emulation
-                            is_mobile = viewport_type == "mobile"
-                            
-                            if is_mobile:
-                                viewport = {"width": 844, "height": 390} if landscape else {"width": 390, "height": 844}
-                                user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
-                            else:
-                                viewport = {"width": 1920, "height": 1080} if landscape else {"width": 1440, "height": 2036}
-                                user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-                            context = await browser.new_context(
-                                viewport=viewport,
-                                user_agent=user_agent,
-                                is_mobile=is_mobile,
-                                has_touch=is_mobile,
-                                device_scale_factor=1,
-                            )
-                            page = await context.new_page()
-
-                            # BLOCK ADS & TRACKERS
-                            async def intercept(route):
-                                excluded_resource_types = ["media", "font"] if not include_background else []
-                                if route.request.resource_type in (["analytics", "tracker", "advertising"] + excluded_resource_types) or \
-                                   any(x in route.request.url for x in ["google-analytics.com", "googletagmanager.com", "facebook.net", "adroll.com"]):
-                                    await route.abort()
-                                else:
-                                    await route.continue_()
-                            
-                            await page.route("**/*", intercept)
-                            await page.emulate_media(media="screen")
-
-                            # Navigate to URL
-                            success = False
-                            navigation_errors = []
-                            urls_to_try = [url]
-                            
-                            from urllib.parse import urlparse
-                            parsed = urlparse(url)
-                            if parsed.netloc and not parsed.netloc.startswith("www."):
-                                parts = parsed.netloc.split(".")
-                                if len(parts) == 2 or (len(parts) == 3 and parts[-1] in ["com", "net", "org", "edu", "gov"]):
-                                     www_url = parsed._replace(netloc=f"www.{parsed.netloc}").geturl()
-                                     urls_to_try.append(www_url)
-
-                            for current_url in urls_to_try:
+                            print(f"[NAVIGATE] Attempting: {current_url}")
+                            await page.goto(current_url, wait_until="networkidle", timeout=45000)
+                            success = True
+                            break
+                        except Exception as e:
+                            err_msg = str(e)
+                            navigation_errors.append(f"{current_url}: {err_msg}")
+                            if "ERR_NAME_NOT_RESOLVED" in err_msg or "Timeout" in err_msg or "interrupted" in err_msg:
+                                print(f"[NAVIGATE] Failed {current_url}: {err_msg}. Trying fallback...")
+                                if "interrupted" in err_msg: await asyncio.sleep(1)
                                 try:
-                                    print(f"[NAVIGATE] Attempting: {current_url}")
-                                    await page.goto(current_url, wait_until="networkidle", timeout=45000)
+                                    print(f"[NAVIGATE] Retrying {current_url} with 'load'...")
+                                    await page.goto(current_url, wait_until="load", timeout=20000)
                                     success = True
                                     break
-                                except Exception as e:
-                                    err_msg = str(e)
-                                    navigation_errors.append(f"{current_url}: {err_msg}")
-                                    if "ERR_NAME_NOT_RESOLVED" in err_msg or "Timeout" in err_msg or "interrupted" in err_msg:
-                                        print(f"[NAVIGATE] Failed {current_url}: {err_msg}. Trying fallback...")
-                                        if "interrupted" in err_msg: await asyncio.sleep(1)
-                                        if "Timeout" in err_msg or "interrupted" in err_msg:
-                                            try:
-                                                print(f"[NAVIGATE] Retrying {current_url} with 'load'...")
-                                                await page.goto(current_url, wait_until="load", timeout=20000)
-                                                success = True
-                                                break
-                                            except Exception as e2:
-                                                navigation_errors.append(f"{current_url} (load): {str(e2)}")
-                                        continue
-                                    else:
-                                        print(f"[NAVIGATE] Fatal error for {current_url}: {err_msg}")
-                            
-                            if not success:
-                                error_detail = " | ".join(navigation_errors)
-                                raise RuntimeError(f"Failed to navigate to {url}. Details: {error_detail}")
-
-                            await self._wait_for_images(page, timeout_ms=15000)
-                            if wait_for > 0: await asyncio.sleep(wait_for / 1000)
-
-                            if full_page:
-                                await self._smart_scroll(page)
-                                await asyncio.sleep(0.5)
-
-                            title = await page.title()
-
-                            pdf_options = {
-                                "print_background": include_background,
-                                "scale": scale,
-                                "landscape": landscape,
-                                "margin": {
-                                    "top": margin_top, "bottom": margin_bottom,
-                                    "left": margin_left, "right": margin_right,
-                                },
-                            }
-
-                            if viewport_type == "desktop":
-                                if landscape:
-                                    pdf_options["width"], pdf_options["height"] = "1920px", "1080px"
-                                else:
-                                    pdf_options["width"], pdf_options["height"] = "1440px", "2036px"
-                                if not full_page: pdf_options["page_ranges"] = "1"
+                                except Exception as e2:
+                                    navigation_errors.append(f"{current_url} (load): {str(e2)}")
                             else:
-                                pdf_options["format"] = format
-                                if not full_page: pdf_options["page_ranges"] = "1"
+                                print(f"[NAVIGATE] Fatal error: {err_msg}")
+                    
+                    if not success:
+                        raise RuntimeError(f"Navigation failed: {' | '.join(navigation_errors)}")
 
-                            pdf_bytes = await page.pdf(**pdf_options)
-                            pdf_bytes = self._compress_pdf(pdf_bytes, page)
+                    await self._wait_for_images(page, timeout_ms=15000)
+                    if wait_for > 0: await asyncio.sleep(wait_for / 1000)
 
-                            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
-                            page_count = len(pdf_reader.pages)
+                    if full_page:
+                        await self._smart_scroll(page)
+                        await asyncio.sleep(0.5)
 
-                            return pdf_bytes, page_count, title
+                    title = await page.title()
+                    pdf_options = {
+                        "print_background": include_background,
+                        "scale": scale,
+                        "landscape": landscape,
+                        "margin": {"top": margin_top, "bottom": margin_bottom, "left": margin_left, "right": margin_right},
+                    }
 
-                        finally:
-                            try:
-                                await browser.close()
-                            except:
-                                pass
-                
-                except (PlaywrightError, Exception) as e:
+                    if viewport_type == "desktop":
+                        pdf_options["width"], pdf_options["height"] = ("1920px", "1080px") if landscape else ("1440px", "2036px")
+                        if not full_page: pdf_options["page_ranges"] = "1"
+                    else:
+                        pdf_options["format"] = format
+                        if not full_page: pdf_options["page_ranges"] = "1"
+
+                    pdf_bytes = await page.pdf(**pdf_options)
+                    pdf_bytes = self._compress_pdf(pdf_bytes, page)
+
+                    pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+                    page_count = len(pdf_reader.pages)
+
+                    return pdf_bytes, page_count, title
+
+                except Exception as e:
                     last_err = e
                     err_msg = str(e)
-                    print(f"[CONVERSION ATTEMPT {attempt+1}] Failed: {err_msg}")
+                    print(f"[WEB-PDF] Attempt {attempt+1} failed: {err_msg}")
                     
-                    # If it's a driver crash or target closed, retry with fresh driver
-                    retryable_errors = ["Connection closed", "handler is closed", "Target closed", "Browser closed", "Target page, context or browser has been closed"]
-                    if any(x in err_msg for x in retryable_errors) and attempt < max_attempts - 1:
-                        await asyncio.sleep(2)
+                    retryable_errors = [
+                        "Connection closed", "handler is closed", "Target closed", 
+                        "Browser closed", "Target page, context or browser has been closed"
+                    ]
+                    
+                    if attempt < max_attempts - 1 and any(x in err_msg for x in retryable_errors):
+                        retry_delay = 2 * (attempt + 1)
+                        print(f"[WEB-PDF] Retrying in {retry_delay}s with fresh driver...")
+                        await asyncio.sleep(retry_delay)
                         continue
                     else:
                         raise e
+                finally:
+                    # Explicit cleanup
+                    if browser:
+                        try: await browser.close()
+                        except: pass
+                    if playwright:
+                        try: await playwright.stop()
+                        except: pass
             
             raise last_err or RuntimeError("Conversion failed unexpectedly")
 
