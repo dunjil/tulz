@@ -110,14 +110,60 @@ class WebPdfService:
                     # Emulate screen media for desktop
                     await page.emulate_media(media="screen")
 
-                    # Navigate to URL with safety fallback
-                    # Some sites never reach 'networkidle', so we fallback to 'load' after 20s
-                    try:
-                        await page.goto(url, wait_until="networkidle", timeout=30000)
-                    except Exception as e:
-                        print(f"Network idle timeout, falling back to basic load: {e}")
-                        # If networkidle fails/takes too long, just wait for minimum load
-                        await page.goto(url, wait_until="load", timeout=15000)
+                    # Navigate to URL with safety fallback and DNS retry
+                    success = False
+                    navigation_errors = []
+                    
+                    # Try list: [original url with networkidle, original url with load, www. fallback]
+                    urls_to_try = [url]
+                    
+                    # If it's a root domain (e.g., https://example.com), add www fallback
+                    from urllib.parse import urlparse
+                    parsed = urlparse(url)
+                    if parsed.netloc and not parsed.netloc.startswith("www."):
+                        # Simple check if netloc is likely a root domain (one or two dots)
+                        # Avoid adding www. to subdomains like api.example.com
+                        parts = parsed.netloc.split(".")
+                        if len(parts) == 2 or (len(parts) == 3 and parts[-1] in ["com", "net", "org", "edu", "gov"]):
+                             www_url = parsed._replace(netloc=f"www.{parsed.netloc}").geturl()
+                             urls_to_try.append(www_url)
+
+                    for current_url in urls_to_try:
+                        try:
+                            print(f"[NAVIGATE] Attempting: {current_url}")
+                            # First attempt with networkidle (higher quality)
+                            await page.goto(current_url, wait_until="networkidle", timeout=45000)
+                            success = True
+                            break
+                        except Exception as e:
+                            err_msg = str(e)
+                            navigation_errors.append(f"{current_url}: {err_msg}")
+                            
+                            # If it's a DNS error or Timeout, try the next option
+                            if "ERR_NAME_NOT_RESOLVED" in err_msg or "Timeout" in err_msg or "interrupted" in err_msg:
+                                print(f"[NAVIGATE] Failed {current_url}: {err_msg}. Trying fallback...")
+                                
+                                # If interrupted, wait a bit for the browser to settle
+                                if "interrupted" in err_msg:
+                                    await asyncio.sleep(1)
+                                    
+                                # Fallback to 'load' for the SAME url if it was just a timeout/idle issue
+                                if "Timeout" in err_msg or "interrupted" in err_msg:
+                                    try:
+                                        print(f"[NAVIGATE] Retrying {current_url} with 'load'...")
+                                        await page.goto(current_url, wait_until="load", timeout=20000)
+                                        success = True
+                                        break
+                                    except Exception as e2:
+                                        navigation_errors.append(f"{current_url} (load): {str(e2)}")
+                                continue
+                            else:
+                                # For other errors (4xx, 5xx), we might still want to try 'load'
+                                print(f"[NAVIGATE] Fatal error for {current_url}: {err_msg}")
+                    
+                    if not success:
+                        error_detail = " | ".join(navigation_errors)
+                        raise RuntimeError(f"Failed to navigate to {url}. Details: {error_detail}")
 
                     # Wait for images to load (capped at 15s)
                     await self._wait_for_images(page, timeout_ms=15000)
@@ -243,7 +289,8 @@ class WebPdfService:
                             
                             # Only replace if smaller
                             if len(new_image_bytes) < len(image_bytes):
-                                doc.replace_image(xref, stream=new_image_bytes)
+                                # replace_image is on Page object in recent PyMuPDF
+                                page.replace_image(xref, stream=new_image_bytes)
                         except Exception as img_err:
                             print(f"Failed to compress image {xref}: {img_err}")
                             continue
