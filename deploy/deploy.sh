@@ -144,6 +144,33 @@ step "0/10" "Stopping services and cleaning up..."
 # Stop services first to avoid race conditions with cleanup
 systemctl stop tulz-api tulz-web || true
 
+# Aggressive Disk Cleanup (Fix "No space left on device")
+disk_cleanup() {
+    step "Cleanup" "Freeing up disk space..."
+    
+    # 1. Clean package manager cache (often huge)
+    apt-get clean
+    apt-get autoremove -y
+    
+    # 2. Vacuum systemd journal logs (keep only 100M or 1 day)
+    journalctl --vacuum-time=1d
+    journalctl --vacuum-size=100M
+    
+    # 3. Clean /tmp more aggressively
+    rm -rf /tmp/* /var/tmp/*
+    
+    # 4. Clean old application logs
+    find $APP_DIR/logs -name "*.log" -type f -mtime +7 -delete
+    find /var/log -name "*.gz" -type f -delete
+    
+    # 5. Clean npm cache
+    npm cache clean --force 2>/dev/null || true
+    
+    log "Disk space after cleanup:"
+    df -h /
+}
+
+disk_cleanup
 security_cleanup
 enforce_firewall
 deep_malware_hunt
