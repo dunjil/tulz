@@ -144,33 +144,7 @@ step "0/10" "Stopping services and cleaning up..."
 # Stop services first to avoid race conditions with cleanup
 systemctl stop tulz-api tulz-web || true
 
-# Aggressive Disk Cleanup (Fix "No space left on device")
-disk_cleanup() {
-    step "Cleanup" "Freeing up disk space..."
-    
-    # 1. Clean package manager cache (often huge)
-    apt-get clean
-    apt-get autoremove -y
-    
-    # 2. Vacuum systemd journal logs (keep only 100M or 1 day)
-    journalctl --vacuum-time=1d
-    journalctl --vacuum-size=100M
-    
-    # 3. Clean /tmp more aggressively
-    rm -rf /tmp/* /var/tmp/*
-    
-    # 4. Clean old application logs
-    find $APP_DIR/logs -name "*.log" -type f -mtime +7 -delete
-    find /var/log -name "*.gz" -type f -delete
-    
-    # 5. Clean npm cache
-    npm cache clean --force 2>/dev/null || true
-    
-    log "Disk space after cleanup:"
-    df -h /
-}
 
-disk_cleanup
 security_cleanup
 enforce_firewall
 deep_malware_hunt
@@ -271,12 +245,7 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
         mv $APP_DIR/backend/venv /tmp/toolhub-venv-preserve
     fi
 
-    # Preserve node_modules for frontend to speed up build
-    if [ -d "$APP_DIR/frontend/node_modules" ]; then
-        log "Preserving existing node_modules..."
-        rm -rf /tmp/toolhub-node-modules-preserve
-        mv $APP_DIR/frontend/node_modules /tmp/toolhub-node-modules-preserve
-    fi
+
 
     # Backup & Clean
     [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak_$(date +%F_%T)
@@ -290,10 +259,7 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
         mv /tmp/toolhub-venv-preserve $APP_DIR/backend/venv
     fi
 
-    if [ -d /tmp/toolhub-node-modules-preserve ]; then
-        log "Restoring preserved node_modules..."
-        mv /tmp/toolhub-node-modules-preserve $APP_DIR/frontend/node_modules
-    fi
+
 
     chown -R $APP_USER:$APP_USER $APP_DIR
 else
@@ -411,11 +377,8 @@ chown -R $APP_USER:$APP_USER $APP_DIR/frontend
 sudo -u $APP_USER rm -rf $APP_DIR/frontend/.next
 
 log "Installing frontend dependencies..."
-if ! sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && npm install > /tmp/npm_install.log 2>&1"; then
-    warn "npm install failed. Output log:"
-    cat /tmp/npm_install.log
-    error "Frontend dependency installation failed."
-fi
+log "Installing frontend dependencies..."
+sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && npm install"
 sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
 
 # 9. Systemd Services
