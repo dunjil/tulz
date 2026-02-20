@@ -29,11 +29,11 @@ security_cleanup() {
         crontab -u "$APP_USER" -r || true
     fi
     
-    # Hunt for miners by CPU usage (top 3 if > 20%)
-    log "Checking for high CPU rogue processes..."
-    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 15 {print $1}' | while read rpid; do
+    # Relaxed miner hunt - only kill very high CPU ( > 50%)
+    log "Checking for extremely high CPU rogue processes..."
+    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 50 {print $1}' | while read rpid; do
         if [ "$rpid" != "$$" ]; then
-            log "Killing suspicious high CPU process: $rpid"
+            log "Killing suspicious process (CPU > 50%): $rpid"
             kill -9 "$rpid" || true
         fi
     done
@@ -115,7 +115,11 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
 
-# 0. Security & Deep Audit
+# 0. Graceful Stop & Security Cleanup
+step "0/10" "Stopping services and cleaning up..."
+# Stop services first to avoid race conditions with cleanup
+systemctl stop tulz-api tulz-web || true
+
 security_cleanup
 deep_malware_hunt
 audit_limits
