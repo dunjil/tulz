@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import admin, auth, feedback, users, visits
-from app.api.v1.tools import qrcode, calculator, image, pdf, pdf_filler, excel, favicon, webpdf, json_formatter, markdown_pdf, text_diff, invoice, markdown_cv, ocr
+from app.api.v1.tools import qrcode, calculator, image, pdf, pdf_filler, excel, favicon, webpdf, json_formatter, markdown_pdf, text_diff, invoice, markdown_cv #, ocr
 # from app.api.v1.tools import ocr_batch  # Temporarily disabled until celery is installed
 
 # Main v1 router
@@ -38,5 +38,5 @@ router.include_router(markdown_pdf.router, prefix="/tools/markdown", tags=["Mark
 router.include_router(text_diff.router, prefix="/tools/diff", tags=["Text Diff"])
 router.include_router(invoice.router, prefix="/tools/invoice", tags=["Invoice Generator"])
 router.include_router(markdown_cv.router, prefix="/tools/cv", tags=["CV Generator"])
-router.include_router(ocr.router, prefix="/tools/ocr", tags=["OCR"])
+# router.include_router(ocr.router, prefix="/tools/ocr", tags=["OCR"]) # Temporarily disabled
 # router.include_router(ocr_batch.router, prefix="/tools/ocr", tags=["OCR Batch"])  # Temporarily disabled

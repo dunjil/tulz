@@ -340,6 +340,7 @@ export const toolsConfig: ToolConfig[] = [
     },
 
     // Other
+    /*
     {
         slug: "ocr",
         title: "OCR - Image to Text Converter | Tulz",
@@ -347,6 +348,7 @@ export const toolsConfig: ToolConfig[] = [
         keywords: ["ocr online", "image to text", "extract text", "photo to text"],
         category: "other",
     },
+    */
     {
         slug: "favicon",
         title: "Favicon Generator | Tulz",

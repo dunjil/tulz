@@ -194,6 +194,7 @@ export const guides: Guide[] = [
             ]
         },
     },
+    /*
     {
         slug: "how-to-extract-text-from-images-ocr",
         title: "How to Extract Text from Images and Scanned Documents",
@@ -239,6 +240,7 @@ export const guides: Guide[] = [
             ]
         },
     },
+    */
     {
         slug: "how-to-merge-multiple-pdf-files",
         title: "How to Combine Multiple PDF Files into One Document",

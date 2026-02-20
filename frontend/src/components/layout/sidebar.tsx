@@ -400,6 +400,7 @@ const toolsNavigation = [
     gradient: "from-rose-500 to-pink-600",
     isFree: true,
   },
+  /*
   {
     name: "OCR Tools",
     href: "/dashboard/tools/ocr",
@@ -407,6 +408,7 @@ const toolsNavigation = [
     gradient: "from-cyan-500 to-blue-600",
     isFree: true,
   },
+  */
 ];
 
 const accountNavigation = [
