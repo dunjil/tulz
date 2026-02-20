@@ -288,67 +288,94 @@ class WebPdfService:
     async def _remove_overlays(self, page):
         """Intelligently remove modals, cookie banners, and intrusive fixed overlays."""
         try:
-            await page.evaluate("""
-                () => {
-                    const debug = false;
-                    const selectorsToHide = [
-                        // Common cookie/consent banners
-                        '[id*="cookie"]', '[class*="cookie"]', '[id*="consent"]', '[class*="consent"]',
-                        '[id*="policy"]', '[class*="policy"]', '[id*="gdpr"]', '[class*="gdpr"]',
-                        '.banner', '.notice', '.overlay', '.modal', '.popup',
-                        // Specific role based
-                        '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]'
-                    ];
+            # We run this twice to catch elements that might be re-rendered or have nested overlays
+            for _ in range(2):
+                await page.evaluate("""
+                    () => {
+                        const selectorsToHide = [
+                            // Common cookie/consent banners
+                            '[id*="cookie"]', '[class*="cookie"]', '[id*="consent"]', '[class*="consent"]',
+                            '[id*="policy"]', '[class*="policy"]', '[id*="gdpr"]', '[class*="gdpr"]',
+                            '[id*="popup"]', '[class*="popup"]', '[id*="modal"]', '[class*="modal"]',
+                            '.banner', '.notice', '.overlay', '.popup', '.cookie-popup', '.cookie-overflow-popin',
+                            // Specific role based
+                            '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]',
+                            // Common mobile app banners
+                            '.smartbanner', '.app-banner',
+                            // Dark backdrops
+                            '.backdrop', '[class*="backdrop"]', '[class*="dimmer"]'
+                        ];
 
-                    const hideElement = (el) => {
-                        if (!el) return;
-                        el.style.setProperty('display', 'none', 'important');
-                        el.style.setProperty('visibility', 'hidden', 'important');
-                        el.style.setProperty('opacity', '0', 'important');
-                        el.style.setProperty('pointer-events', 'none', 'important');
-                    };
+                        const hideElement = (el) => {
+                            if (!el) return;
+                            el.style.setProperty('display', 'none', 'important');
+                            el.style.setProperty('visibility', 'hidden', 'important');
+                            el.style.setProperty('opacity', '0', 'important');
+                            el.style.setProperty('pointer-events', 'none', 'important');
+                            el.style.setProperty('z-index', '-1', 'important');
+                        };
 
-                    // 1. Hide by common selectors
-                    selectorsToHide.forEach(selector => {
-                        try {
-                            document.querySelectorAll(selector).forEach(hideElement);
-                        } catch(e) {}
-                    });
+                        // 1. Hide by common selectors
+                        selectorsToHide.forEach(selector => {
+                            try {
+                                document.querySelectorAll(selector).forEach(hideElement);
+                            } catch(e) {}
+                        });
 
-                    // 2. Scan for fixed/sticky headers/modals
-                    const all = document.querySelectorAll('*');
-                    const viewportWidth = window.innerWidth;
-                    const viewportHeight = window.innerHeight;
+                        // 2. Scan for elements by text content (Best effort for "Accept/Proceed")
+                        const interactiveTags = ['button', 'a', 'div', 'span'];
+                        const triggerWords = ['accept', 'agree', 'proceed', 'allow', 'consent', 'got it', 'understand'];
+                        
+                        document.querySelectorAll(interactiveTags.join(',')).forEach(el => {
+                            const text = el.innerText?.toLowerCase() || '';
+                            if (triggerWords.some(word => text.includes(word)) && text.length < 50) {
+                                // If the parent looks like a banner or modal, hide it
+                                let parent = el.parentElement;
+                                for (let i = 0; i < 4 && parent; i++) {
+                                    const style = window.getComputedStyle(parent);
+                                    if (style.position === 'fixed' || style.position === 'sticky') {
+                                        hideElement(parent);
+                                        break;
+                                    }
+                                    parent = parent.parentElement;
+                                }
+                            }
+                        });
 
-                    all.forEach(el => {
-                        const style = window.getComputedStyle(el);
-                        const position = style.position;
-                        const zIndex = parseInt(style.zIndex) || 0;
+                        // 3. Scan for fixed/sticky headers/modals by visual heuristics
+                        const all = document.querySelectorAll('*');
+                        const vW = window.innerWidth;
+                        const vH = window.innerHeight;
 
-                        if (position === 'fixed' || position === 'sticky') {
+                        all.forEach(el => {
+                            const style = window.getComputedStyle(el);
+                            const position = style.position;
+                            if (position !== 'fixed' && position !== 'sticky') return;
+
                             const rect = el.getBoundingClientRect();
-                            
-                            // A. Large overlays (potential modals/backdrops)
-                            const isLarge = (rect.width > viewportWidth * 0.5 && rect.height > viewportHeight * 0.5);
-                            
-                            // B. Top/Bottom bars (headers/footers/banners)
-                            const isHeader = (rect.top <= 0 && rect.width > viewportWidth * 0.8);
-                            const isFooter = (rect.bottom >= viewportHeight && rect.width > viewportWidth * 0.8);
+                            if (rect.width === 0 || rect.height === 0) return;
 
-                            // Hide large overlays and suspicious modals
-                            // We keep headers/footers unless they are exceptionally large (over 20% of height)
-                            if (isLarge || (isHeader && rect.height > viewportHeight * 0.2) || (isFooter && rect.height > viewportHeight * 0.2)) {
+                            // A. Large full-page or semi-opaque overlays
+                            const coversLargeArea = (rect.width > vW * 0.7 && rect.height > vH * 0.7);
+                            const isSemiTransparent = style.backgroundColor.includes('rgba') && !style.backgroundColor.endsWith(', 0)');
+                            
+                            // B. Fixed headers/footers
+                            const isHeader = (rect.top <= 0 && rect.width > vW * 0.8);
+                            const isFooter = (rect.bottom >= vH && rect.width > vW * 0.8);
+
+                            if (coversLargeArea || isSemiTransparent || (isHeader && rect.height > vH * 0.25) || (isFooter && rect.height > vH * 0.25)) {
                                 hideElement(el);
                             }
-                        }
-                    });
+                        });
 
-                    // 3. Remove "overflow: hidden" from body/html which often locks scrolling when modals are open
-                    document.documentElement.style.setProperty('overflow', 'auto', 'important');
-                    document.body.style.setProperty('overflow', 'auto', 'important');
-                    document.body.style.setProperty('position', 'static', 'important');
-                }
-            """)
+                        // 4. Force scrollability
+                        document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                        document.body.style.setProperty('overflow', 'auto', 'important');
+                        document.body.style.setProperty('position', 'static', 'important');
+                        document.body.classList.remove('modal-open', 'no-scroll', 'cookie-banner-open');
+                    }
+                """)
+                await asyncio.sleep(0.5) # Wait for any transition to finish
         except Exception as e:
             print(f"[CLEANUP] Failed to remove overlays: {e}")
 
