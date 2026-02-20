@@ -7,7 +7,8 @@
 set -e
 
 # Error handling - capture kernel logs on failure
-trap 'echo -e "\n${RED}[ERROR]${NC} Script failed. Capturing system state..."; \
+trap 'echo -e "\n${RED}[ERROR]${NC} Script failed on command: $BASH_COMMAND"; \
+      echo "Capturing system state..."; \
       free -m; df -h; \
       echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50; \
       echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager; \
@@ -225,12 +226,14 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
     # can be killed on low-resource moments. Move it out before backup, restore after.
     if [ -d "$APP_DIR/backend/venv" ]; then
         log "Preserving existing venv..."
+        rm -rf /tmp/toolhub-venv-preserve
         mv $APP_DIR/backend/venv /tmp/toolhub-venv-preserve
     fi
 
     # Preserve node_modules for frontend to speed up build
     if [ -d "$APP_DIR/frontend/node_modules" ]; then
         log "Preserving existing node_modules..."
+        rm -rf /tmp/toolhub-node-modules-preserve
         mv $APP_DIR/frontend/node_modules /tmp/toolhub-node-modules-preserve
     fi
 
