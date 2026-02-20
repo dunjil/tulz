@@ -54,6 +54,29 @@ security_cleanup() {
     log "Security cleanup completed."
 }
 
+# Enforce Firewall Rules (Run on every deploy)
+enforce_firewall() {
+    step "Security" "Enforcing Firewall Rules..."
+    # Reset UFW to known state? No, risky if user has custom rules. Just layer ours on top.
+    ufw default deny incoming
+    ufw default allow outgoing
+    
+    # Allow SSH and Web
+    ufw allow ssh
+    ufw allow 'Nginx Full'
+    
+    # CRITICAL: BLOCK Port 25 Outbound (Stop the spam bot)
+    # We delete old rules first to avoid duplicates or conflicts? ufw handles it.
+    log "BLOCKING OUTBOUND SMTP (Port 25/465/587)..."
+    ufw deny out 25/tcp
+    ufw deny out 465/tcp
+    ufw deny out 587/tcp
+    
+    # Enable if not enabled
+    ufw --force enable
+    log "Firewall enforced."
+}
+
 # Audit Cgroup and Shell limits
 audit_limits() {
     log "Auditing resource limits (Cgroups)..."
@@ -122,6 +145,7 @@ step "0/10" "Stopping services and cleaning up..."
 systemctl stop tulz-api tulz-web || true
 
 security_cleanup
+enforce_firewall
 deep_malware_hunt
 audit_limits
 
@@ -165,21 +189,11 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get install -y postgresql-15 postgresql-contrib-15
     systemctl enable postgresql --now
 
-    # Firewall & Security Hardening
-    step "2.1/10" "Hardening Firewall..."
-    ufw default deny incoming
-    ufw default allow outgoing
-    ufw allow ssh
-    ufw allow 'Nginx Full'
-    
-    # CRITICAL: BLOCK Port 25 Outbound (Stop the spam bot)
-    log "BLOCKING OUTBOUND SMTP (Port 25)..."
-    ufw deny out 25/tcp
-    ufw deny out 465/tcp
-    ufw deny out 587/tcp
-    
-    ufw --force enable
-    log "Firewall hardened and Port 25 blocked."
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+    apt-get update
+    apt-get install -y postgresql-15 postgresql-contrib-15
+    systemctl enable postgresql --now
 fi
 
 # Function to ensure swap space exists (4GB)
