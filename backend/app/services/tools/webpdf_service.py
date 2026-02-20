@@ -139,6 +139,9 @@ class WebPdfService:
                     await self._wait_for_images(page, timeout_ms=15000)
                     if wait_for > 0: await asyncio.sleep(wait_for / 1000)
 
+                    # Clean up the page before capturing
+                    await self._remove_overlays(page)
+
                     if full_page:
                         await self._smart_scroll(page)
                         await asyncio.sleep(0.5)
@@ -281,6 +284,73 @@ class WebPdfService:
             # Fallback to original if compression fails
             print(f"Aggressive compression failed: {e}")
             return pdf_bytes
+
+    async def _remove_overlays(self, page):
+        """Intelligently remove modals, cookie banners, and intrusive fixed overlays."""
+        try:
+            await page.evaluate("""
+                () => {
+                    const debug = false;
+                    const selectorsToHide = [
+                        // Common cookie/consent banners
+                        '[id*="cookie"]', '[class*="cookie"]', '[id*="consent"]', '[class*="consent"]',
+                        '[id*="policy"]', '[class*="policy"]', '[id*="gdpr"]', '[class*="gdpr"]',
+                        '.banner', '.notice', '.overlay', '.modal', '.popup',
+                        // Specific role based
+                        '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]'
+                    ];
+
+                    const hideElement = (el) => {
+                        if (!el) return;
+                        el.style.setProperty('display', 'none', 'important');
+                        el.style.setProperty('visibility', 'hidden', 'important');
+                        el.style.setProperty('opacity', '0', 'important');
+                        el.style.setProperty('pointer-events', 'none', 'important');
+                    };
+
+                    // 1. Hide by common selectors
+                    selectorsToHide.forEach(selector => {
+                        try {
+                            document.querySelectorAll(selector).forEach(hideElement);
+                        } catch(e) {}
+                    });
+
+                    // 2. Scan for fixed/sticky headers/modals
+                    const all = document.querySelectorAll('*');
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+
+                    all.forEach(el => {
+                        const style = window.getComputedStyle(el);
+                        const position = style.position;
+                        const zIndex = parseInt(style.zIndex) || 0;
+
+                        if (position === 'fixed' || position === 'sticky') {
+                            const rect = el.getBoundingClientRect();
+                            
+                            // A. Large overlays (potential modals/backdrops)
+                            const isLarge = (rect.width > viewportWidth * 0.5 && rect.height > viewportHeight * 0.5);
+                            
+                            // B. Top/Bottom bars (headers/footers/banners)
+                            const isHeader = (rect.top <= 0 && rect.width > viewportWidth * 0.8);
+                            const isFooter = (rect.bottom >= viewportHeight && rect.width > viewportWidth * 0.8);
+
+                            // Hide large overlays and suspicious modals
+                            // We keep headers/footers unless they are exceptionally large (over 20% of height)
+                            if (isLarge || (isHeader && rect.height > viewportHeight * 0.2) || (isFooter && rect.height > viewportHeight * 0.2)) {
+                                hideElement(el);
+                            }
+                        }
+                    });
+
+                    // 3. Remove "overflow: hidden" from body/html which often locks scrolling when modals are open
+                    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                    document.body.style.setProperty('overflow', 'auto', 'important');
+                    document.body.style.setProperty('position', 'static', 'important');
+                }
+            """)
+        except Exception as e:
+            print(f"[CLEANUP] Failed to remove overlays: {e}")
 
     async def _wait_for_images(self, page, timeout_ms=15000):
         """Wait for all images (including background-images) on the page to be fully loaded."""
