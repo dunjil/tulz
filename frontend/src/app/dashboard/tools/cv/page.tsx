@@ -1,6 +1,7 @@
 "use client";
 
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { CV_TEMPLATES } from "@/data/cv-templates";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,10 +42,8 @@ import {
   User,
   Briefcase,
   BookOpen,
-  Lock,
   Crown,
-  Loader2,
-  RefreshCw,
+  Lock,
 } from "lucide-react";
 import { SupportButton } from "@/components/shared/support-button";
 import { useUpgradeModal } from "@/components/shared/upgrade-modal";
@@ -61,106 +60,16 @@ export default function CvGeneratorPage() {
   const [title, setTitle] = useState("");
   const [template, setTemplate] = useState("modern");
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [htmlPreview, setHtmlPreview] = useState<string>("");
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated } = useAuth();
   const isPro = user?.subscription_tier && ["pro", "premium", "unlimited"].includes(user.subscription_tier);
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
 
-  // Get usage data to check if user can generate
-  const { data: usageData } = useQuery({
-    queryKey: ["remaining-uses"],
-    queryFn: async () => {
-      const response = await apiHelpers.getRemainingUses();
-      return response.data;
-    },
-    enabled: !!isAuthenticated,
-  });
-
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
-
-  // Handle template selection with Pro check
-  const handleTemplateSelect = (templateId: string) => {
-    const selectedTemplate = templates?.find((t) => t.id === templateId);
-    if (selectedTemplate && !selectedTemplate.is_free && !isPro) {
-      showUpgradeModal();
-      return;
-    }
-    setTemplate(templateId);
-  };
-
-  // Generate PDF preview with debouncing
-  const generatePreview = useCallback(async () => {
-    if (!content.trim()) {
-      setPdfPreviewUrl(null);
-      return;
-    }
-
-    setIsGeneratingPreview(true);
-    try {
-      const response = await apiHelpers.cvPreview({
-        content,
-        template,
-        title: title || undefined,
-      });
-
-      if (response.data.success && response.data.pdf_base64) {
-        // Convert base64 to blob URL for iframe display
-        const byteCharacters = atob(response.data.pdf_base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-
-        // Revoke old URL to prevent memory leaks
-        if (pdfPreviewUrl) {
-          URL.revokeObjectURL(pdfPreviewUrl);
-        }
-
-        setPdfPreviewUrl(url);
-      } else if (response.data.requires_pro) {
-        // Pro template required - don't show error, just skip preview
-      }
-    } catch (error) {
-      console.error("Preview generation failed:", error);
-    } finally {
-      setIsGeneratingPreview(false);
-    }
-  }, [content, template, title]);
-
-  // Debounced preview generation - updates after user stops typing
-  useEffect(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-
-    debounceTimer.current = setTimeout(() => {
-      generatePreview();
-    }, 800); // Wait 800ms after last keystroke
-
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
-  }, [content, template, title, generatePreview]);
-
-  // Cleanup blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (pdfPreviewUrl) {
-        URL.revokeObjectURL(pdfPreviewUrl);
-      }
-    };
-  }, []);
-
-  // Fetch templates
+  // Load templates and samples
   const { data: templates } = useQuery({
     queryKey: ["cv-templates"],
     queryFn: async () => {
@@ -174,7 +83,6 @@ export default function CvGeneratorPage() {
     },
   });
 
-  // Fetch samples list
   const { data: samples } = useQuery({
     queryKey: ["cv-samples"],
     queryFn: async () => {
@@ -187,6 +95,42 @@ export default function CvGeneratorPage() {
       }[];
     },
   });
+
+  // Generate HTML preview in real-time
+  useEffect(() => {
+    import("marked").then(({ marked }) => {
+      const html = marked.parse(content || "");
+      // marked returns a promise in newer versions if configured, but by default it's sync
+      if (typeof html === "string") {
+        setHtmlPreview(html);
+      } else {
+        html.then((h) => setHtmlPreview(h));
+      }
+    });
+  }, [content]);
+
+  // Handle responsive scaling
+  useEffect(() => {
+    const updateScale = () => {
+      if (previewContainerRef.current) {
+        const containerWidth = previewContainerRef.current.offsetWidth - 64; // padding
+        const a4WidthPx = 210 * 3.78; // 210mm to px (approx 96dpi)
+        const newScale = Math.min(1, containerWidth / a4WidthPx);
+        setPreviewScale(newScale);
+      }
+    };
+
+    const observer = new ResizeObserver(updateScale);
+    if (previewContainerRef.current) observer.observe(previewContainerRef.current);
+    updateScale();
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Handle template selection
+  const handleTemplateSelect = (templateId: string) => {
+    setTemplate(templateId);
+  };
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -452,43 +396,45 @@ Brief professional summary...
         {/* Preview Panel */}
         <Card className="flex flex-col">
           <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                PDF Preview
-                {isGeneratingPreview && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generatePreview}
-                disabled={!content || isGeneratingPreview}
-              >
-                <RefreshCw className={`h-4 w-4 ${isGeneratingPreview ? "animate-spin" : ""}`} />
-              </Button>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Live Preview
             </CardTitle>
             <CardDescription>
-              Exact PDF output - updates as you type
+              Real-time document preview (A4 aspect)
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1">
-            {pdfPreviewUrl ? (
-              <iframe
-                src={pdfPreviewUrl}
-                className="w-full h-full min-h-[400px] border rounded-lg bg-white"
-                title="CV Preview"
-              />
-            ) : (
-              <div className="h-full min-h-[400px] border rounded-lg bg-muted/50 flex items-center justify-center">
-                <p className="text-muted-foreground text-sm">
-                  {isGeneratingPreview
-                    ? "Generating preview..."
-                    : "Start typing in the editor to see your CV preview..."}
-                </p>
-              </div>
-            )}
+          <CardContent className="flex-1 overflow-hidden bg-muted/30 p-0 flex flex-col">
+            <div
+              ref={previewContainerRef}
+              className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start"
+            >
+              {htmlPreview ? (
+                <div
+                  className="bg-white shadow-2xl origin-top transition-transform duration-200"
+                  style={{
+                    width: "210mm",
+                    minHeight: "297mm",
+                    transform: `scale(${previewScale})`,
+                  }}
+                >
+                  <style dangerouslySetInnerHTML={{ __html: CV_TEMPLATES[template]?.css || "" }} />
+                  <div
+                    className="cv-document"
+                    dangerouslySetInnerHTML={{ __html: htmlPreview }}
+                  />
+                </div>
+              ) : (
+                <div className="h-full min-h-[400px] w-full border rounded-lg bg-muted/50 flex items-center justify-center">
+                  <p className="text-muted-foreground text-sm">
+                    Start typing in the editor to see your CV preview...
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="bg-background border-t p-2 text-[10px] text-muted-foreground text-center">
+              * Frontend preview may differ slightly from final generated PDF
+            </div>
           </CardContent>
         </Card>
       </div>
