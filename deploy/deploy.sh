@@ -247,9 +247,13 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
 
 
 
-    # Backup & Clean
-    [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak_$(date +%F_%T)
-    [ -d "$APP_DIR/frontend" ] && mv $APP_DIR/frontend $APP_DIR/frontend.bak_$(date +%F_%T)
+    # Clean up ALL old backups first (these accumulate and fill the disk!)
+    log "Cleaning up old backups..."
+    rm -rf $APP_DIR/backend.bak_* $APP_DIR/frontend.bak_*
+
+    # Backup & Clean (single rotating backup)
+    [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak
+    [ -d "$APP_DIR/frontend" ] && mv $APP_DIR/frontend $APP_DIR/frontend.bak
 
     tar -xzf /tmp/toolhub-code.tar.gz -C $APP_DIR
 
