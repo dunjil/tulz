@@ -34,39 +34,38 @@ error_handler() {
 }
 trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
 
-# Security Cleanup - Kill rogue processes and crontabs
-security_cleanup() {
-    log "[START] security_cleanup"
-    log "Performing NUCLEAR security cleanup..."
+# Non-destructive malware purge (Safe to run while app is online)
+malware_purge() {
+    log "[START] malware_purge"
+    log "Purging malicious files and rogue miners..."
+    
     # Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
     pkill -9 -f "x86_64" || true
     
-    # Kill ALL processes owned by toolhub user (except our sub-processes if any)
-    # This stops memory-resident miners that might be hidden
-    if id "$APP_USER" &>/dev/null; then
-        log "Purging all processes for user $APP_USER..."
-        # NOTE: This usually kills the running app. We only call this during SWAP now.
-        pkill -u "$APP_USER" -9 || true
-        crontab -u "$APP_USER" -r || true
-    fi
-    
-    # Relaxed miner hunt - only kill very high CPU ( > 50%)
-    log "Checking for extremely high CPU rogue processes..."
-    ps -eo pid,ppid,%cpu,command --sort=-%cpu | awk 'NR>1 && $3 > 50 {print $1}' | while read rpid; do
-        if [ "$rpid" != "$$" ]; then
-            log "Killing suspicious process (CPU > 50%): $rpid"
-            kill -9 "$rpid" || true
-        fi
-    done
-
-    # Clean /tmp of suspicious files
-    rm -rf /tmp/x86_64* /tmp/*.kok /tmp/.*.kok /tmp/kok* || true
+    # Clean /tmp and /var/tmp of suspicious files (specific patterns found in logs)
+    rm -rf /tmp/.*.kok /tmp/*.kok /tmp/.b_* /tmp/kok* /tmp/.x /tmp/.monitor /tmp/logic.sh || true
+    rm -rf /var/tmp/.b_* /var/tmp/.monitor || true
+    rm -rf /dev/shm/*.kok || true
     
     # KILL processes using port 25 (SMTP) - This is where the leak is
-    log "Hunting for processes using port 25 (SMTP)..."
     if command -v lsof >/dev/null; then
         lsof -i :25 -t | xargs -r kill -9 2>/dev/null || true
+    fi
+    
+    log "[END] malware_purge"
+}
+
+# Destructive cleanup (Only run during swap/when app is stopped)
+production_cleanup() {
+    log "[START] production_cleanup"
+    log "Performing final production environment purge..."
+    
+    # Kill ALL processes owned by toolhub user
+    if id "$APP_USER" &>/dev/null; then
+        log "Purging all processes for user $APP_USER..."
+        pkill -u "$APP_USER" -9 || true
+        crontab -u "$APP_USER" -r || true
     fi
     
     # KILL zombie playwright/chromium processes
@@ -74,7 +73,7 @@ security_cleanup() {
     pkill -9 -f "headless_shell" || true
     pkill -9 -f "chromium" || true
     
-    log "[END] security_cleanup"
+    log "[END] production_cleanup"
 }
 
 # Set base firewall rules (SSH/Web)
@@ -183,6 +182,7 @@ step() { echo -e "${BLUE}[$1]${NC} $2"; }
 step "0/10" "Preparing deployment... (Script Version: $SCRIPT_VERSION)"
 # NOTE: We NO LONGER stop services here. We build in staging first.
 
+malware_purge
 setup_firewall_base
 # Audit limits and deep hunt can run while app is online
 audit_limits
@@ -228,6 +228,16 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get install -y postgresql-15 postgresql-contrib-15
     systemctl enable postgresql --now
 fi
+
+# Ensure critical Python tools exist (non-first time check)
+ensure_python_tools() {
+    log "Ensuring critical Python tools (pip, distutils) are installed..."
+    # On current Ubuntu, python3-pip and python3-venv are essential
+    apt-get update -qq
+    apt-get install -y python3-pip python3-venv python3-distutils || warn "Failed to install some python tools"
+}
+
+ensure_python_tools
 
 # Function to ensure swap space exists (4GB)
 ensure_swap() {
@@ -347,8 +357,12 @@ PIP_CMD="sudo -u $APP_USER $STAGING_DIR/backend/venv/bin/python${PYTHON_VERSION}
 
 log "System status before pip upgrade:"
 free -m
-$PIP_CMD --upgrade pip || python${PYTHON_VERSION} -m pip install --upgrade pip
-
+# Use system python to upgrade pip in venv, with a timeout to detect 'Killed'
+timeout 120s $PIP_CMD --upgrade pip || {
+    warn "Pip upgrade in venv failed or was killed. Attempting system-level repair..."
+    python${PYTHON_VERSION} -m pip install --upgrade pip --user || true
+    $PIP_CMD --upgrade pip || warn "Pip upgrade still failing"
+}
 log "Installing backend requirements in staging..."
 if ! $PIP_CMD -r "$STAGING_DIR/backend/requirements.txt"; then
     error "Backend requirements installation failed in staging."
@@ -381,8 +395,8 @@ step "9/10" "Performing ATOMIC SWAP..."
 log "Stopping production services for swap..."
 systemctl stop tulz-api tulz-web || true
 
-# Perform security cleanup now that apps are stopped
-security_cleanup
+# Perform destructive cleanup now that apps are stopped
+production_cleanup
 
 log "Swapping staging to production..."
 # Backup current
