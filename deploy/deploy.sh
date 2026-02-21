@@ -54,10 +54,9 @@ security_cleanup() {
     log "Security cleanup completed."
 }
 
-# Enforce Firewall Rules (Run on every deploy)
-enforce_firewall() {
-    step "Security" "Enforcing Firewall Rules..."
-    # Reset UFW to known state? No, risky if user has custom rules. Just layer ours on top.
+# Set base firewall rules (SSH/Web)
+setup_firewall_base() {
+    step "Security" "Setting up base firewall rules..."
     ufw default deny incoming
     ufw default allow outgoing
     
@@ -65,16 +64,22 @@ enforce_firewall() {
     ufw allow ssh
     ufw allow 'Nginx Full'
     
+    # Enable if not enabled
+    ufw --force enable
+    log "Base firewall enforced."
+}
+
+# Block Port 25 Outbound (Run after deployment)
+block_smtp_outbound() {
+    step "Security" "Locking down SMTP (Port 25/465/587)..."
     # CRITICAL: BLOCK Port 25 Outbound (Stop the spam bot)
-    # We delete old rules first to avoid duplicates or conflicts? ufw handles it.
-    log "BLOCKING OUTBOUND SMTP (Port 25/465/587)..."
     ufw deny out 25/tcp
     ufw deny out 465/tcp
     ufw deny out 587/tcp
     
-    # Enable if not enabled
+    # Re-enable to ensure rules apply
     ufw --force enable
-    log "Firewall enforced."
+    log "SMTP Outbound blocked."
 }
 
 # Audit Cgroup and Shell limits
@@ -146,7 +151,7 @@ systemctl stop tulz-api tulz-web || true
 
 
 security_cleanup
-enforce_firewall
+setup_firewall_base
 deep_malware_hunt
 audit_limits
 
@@ -560,6 +565,8 @@ if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_"
         log "SSL certificate for $DOMAIN already exists and Nginx is patched. Skipping."
     fi
 fi
+
+block_smtp_outbound
 
 log "Deployment Complete!"
 echo -e "${YELLOW}IMPORTANT:${NC} To create your first admin account, run:"
