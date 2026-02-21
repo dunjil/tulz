@@ -46,7 +46,7 @@ export function GoogleAd({
   if (adsenseClientId === "ca-pub-XXXXXXXXXX") {
     return (
       <div className={`w-full ${className}`}>
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 sm:p-4">
           <div className="text-xs text-yellow-700 dark:text-yellow-400 text-center">
             ⚠️ Configure Google AdSense in .env.local to show ads
           </div>
@@ -57,8 +57,8 @@ export function GoogleAd({
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-        <div className="text-xs text-slate-500 dark:text-slate-400 text-center mb-2">
+      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 sm:p-4">
+        <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 text-center mb-1 hidden sm:block">
           Advertisement
         </div>
         <ins

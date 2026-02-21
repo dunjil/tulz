@@ -59,6 +59,8 @@ import {
   Stamp,
   FileSignature,
   Droplets,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 
 // Use relative URL in production (requests go through same domain via nginx proxy)
@@ -347,9 +349,15 @@ export default function PDFFillerPage() {
   // Tool state
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(
-    null
-  );
+  const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Toggle fullscreen mode
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+    // Add small delay to allow UI to update before refitting
+    setTimeout(handleFitToWidth, 100);
+  };
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<{ x: number; y: number }[]>(
     []
@@ -612,6 +620,28 @@ export default function PDFFillerPage() {
   const handleResetZoom = useCallback(() => {
     setZoom(1.0);
   }, []);
+
+  const hasAutoFitted = useRef(false);
+
+  useEffect(() => {
+    if (pdfDoc) {
+      hasAutoFitted.current = false;
+    }
+  }, [pdfDoc]);
+
+  // Auto-fit on first render for mobile devices
+  useEffect(() => {
+    if (pdfDoc && canvasSize.width > 0 && !hasAutoFitted.current) {
+      // Small delay to ensure container is fully rendered and accurate clientWidth is available
+      const timeoutId = setTimeout(() => {
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+          handleFitToWidth();
+        }
+        hasAutoFitted.current = true;
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [pdfDoc, canvasSize.width, handleFitToWidth]);
 
   // Draw annotations on the annotation canvas
   const drawAnnotations = useCallback(() => {
@@ -2637,32 +2667,39 @@ export default function PDFFillerPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
-        <div className="flex items-center gap-3">
-          <FileText className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-lg font-semibold">PDF Filler</h1>
-            <p className="text-xs text-muted-foreground">
-              Fill, sign, and annotate PDFs
-            </p>
+    <div className={cn(
+      "flex flex-col",
+      isFullscreen
+        ? "fixed inset-0 z-[100] bg-background h-screen w-screen"
+        : "h-[calc(100vh-4rem)]"
+    )}>
+      {/* Header - hide in fullscreen */}
+      {!isFullscreen && (
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-lg font-semibold">PDF Filler</h1>
+              <p className="text-xs text-muted-foreground">
+                Fill, sign, and annotate PDFs
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <UsageBadge />
+            {pdfDoc && (
+              <Button
+                onClick={() => fillMutation.mutate()}
+                isLoading={fillMutation.isPending}
+                disabled={annotations.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Save PDF
+              </Button>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <UsageBadge />
-          {pdfDoc && (
-            <Button
-              onClick={() => fillMutation.mutate()}
-              isLoading={fillMutation.isPending}
-              disabled={annotations.length === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Save PDF
-            </Button>
-          )}
-        </div>
-      </div>
+      )}
 
       {!pdfDoc ? (
         /* Upload Section - Enhanced Design */
@@ -2901,7 +2938,7 @@ export default function PDFFillerPage() {
           {/* Canvas Area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Tool Settings Bar */}
-            <div className="flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-2 border-b bg-background flex-wrap overflow-x-auto">
+            <div className="flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-2 border-b bg-background flex-nowrap md:flex-wrap overflow-x-auto whitespace-nowrap">
               {(activeTool === "draw" ||
                 activeTool === "text" ||
                 activeTool === "rectangle" ||
@@ -3237,6 +3274,20 @@ export default function PDFFillerPage() {
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
+                <div className="w-px h-4 bg-border mx-1" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={toggleFullscreen}
+                  className="px-2"
+                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <Minimize className="h-4 w-4" />
+                  ) : (
+                    <Maximize className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </div>
 
@@ -3388,8 +3439,8 @@ export default function PDFFillerPage() {
 
       {/* Signature Modal */}
       {showSignatureModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-[480px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-[480px]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Add Your Signature</CardTitle>
               <Button
@@ -3571,8 +3622,8 @@ export default function PDFFillerPage() {
 
       {/* Initials Modal */}
       {showInitialsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-[320px]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-[320px]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Draw Your Initials</CardTitle>
               <Button
