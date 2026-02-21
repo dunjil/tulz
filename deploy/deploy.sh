@@ -3,7 +3,8 @@
 # ToolHub - VPS Deployment Script (Streamlined)
 # Handles setup and updates for Ubuntu 22.04+
 # ============================================================
-SCRIPT_VERSION="1.0.4 - Diagnostic"
+SCRIPT_VERSION="1.1.0 - Atomic Swap"
+STAGING_DIR="/opt/toolhub-staging"
 
 set -e
 
@@ -15,19 +16,20 @@ error_handler() {
     echo -e "\n${RED}[FATAL ERROR]${NC} Deployment failed at line $line_no"
     echo -e "${RED}[COMMAND]${NC} $command"
     
-    # SYSTEM RECOVERY: If we moved the venv but failed to restore it, do it now.
-    if [ -d "/tmp/toolhub-venv-preserve" ] && [ ! -d "$APP_DIR/backend/venv" ]; then
-        echo "Recovering virtual environment from /tmp..."
-        mkdir -p "$APP_DIR/backend"
-        mv /tmp/toolhub-venv-preserve "$APP_DIR/backend/venv" || true
+    # SYSTEM RECOVERY: If we failed during STAGING build, production is untouched.
+    # Just clean up staging.
+    if [ -d "$STAGING_DIR" ]; then
+        log "Cleaning up failed staging directory..."
+        rm -rf "$STAGING_DIR" || true
     fi
 
-    echo "Attempting to restart services to minimize downtime..."
+    # If we already stopped services, try to bring them back up
+    echo "Ensuring production services are running..."
     systemctl start tulz-api tulz-web || true
     
     echo -e "\n--- Quick Diagnostics ---"
     free -m || echo "free command failed"
-    df -h / || echo "df command failed"
+    df -h / || echo "df failed"
     exit $exit_code
 }
 trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
@@ -44,6 +46,7 @@ security_cleanup() {
     # This stops memory-resident miners that might be hidden
     if id "$APP_USER" &>/dev/null; then
         log "Purging all processes for user $APP_USER..."
+        # NOTE: This usually kills the running app. We only call this during SWAP now.
         pkill -u "$APP_USER" -9 || true
         crontab -u "$APP_USER" -r || true
     fi
@@ -176,16 +179,14 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
 
-# 0. Graceful Stop & Security Cleanup
-step "0/10" "Stopping services and cleaning up... (Script Version: $SCRIPT_VERSION)"
-# Stop services first to avoid race conditions with cleanup
-systemctl stop tulz-api tulz-web || true
+# 0. Preparation
+step "0/10" "Preparing deployment... (Script Version: $SCRIPT_VERSION)"
+# NOTE: We NO LONGER stop services here. We build in staging first.
 
-
-security_cleanup
 setup_firewall_base
-deep_malware_hunt
+# Audit limits and deep hunt can run while app is online
 audit_limits
+deep_malware_hunt
 
 # 1. Setup Check
 step "1/10" "Checking environment..."
@@ -263,67 +264,55 @@ if [ "$FIRST_TIME" = true ]; then
     # Also ensure the /tmp/toolhub dir (from config.py) is owned by us
     mkdir -p /tmp/toolhub
     chown -R $APP_USER:$APP_USER $APP_DIR /tmp/toolhub
+    mkdir -p $STAGING_DIR
 fi
 
-# 4. Extract Code
-step "4/10" "Updating application code..."
+# 4. Build in Staging
+step "4/10" "Preparing new version in staging..."
 if [ -f /tmp/toolhub-code.tar.gz ]; then
-    # Preserve the venv across deploys -- recreating it from scratch is slow and
-    # can be killed on low-resource moments. Move it out before backup, restore after.
+    log "Creating staging environment..."
+    rm -rf "$STAGING_DIR"
+    mkdir -p "$STAGING_DIR"
+    
+    tar -xzf /tmp/toolhub-code.tar.gz -C "$STAGING_DIR"
+    
+    # Sync existing configuration and environment
+    log "Seeding staging from production..."
+    [ -f "$APP_DIR/backend/.env" ] && cp "$APP_DIR/backend/.env" "$STAGING_DIR/backend/"
+    [ -f "$APP_DIR/frontend/.env.local" ] && cp "$APP_DIR/frontend/.env.local" "$STAGING_DIR/frontend/"
+    
+    # Preserve/Copy venv to staging to speed up build
     if [ -d "$APP_DIR/backend/venv" ]; then
-        log "Preserving existing venv..."
-        rm -rf /tmp/toolhub-venv-preserve
-        mv $APP_DIR/backend/venv /tmp/toolhub-venv-preserve
+        log "Copying production virtualenv to staging for build..."
+        cp -r "$APP_DIR/backend/venv" "$STAGING_DIR/backend/"
     fi
 
-
-
-    # Clean up ALL old backups first (these accumulate and fill the disk!)
-    log "Cleaning up old backups..."
-    rm -rf $APP_DIR/backend.bak_* $APP_DIR/frontend.bak_*
-
-    # Backup & Clean (single rotating backup)
-    [ -d "$APP_DIR/backend" ] && mv $APP_DIR/backend $APP_DIR/backend.bak
-    [ -d "$APP_DIR/frontend" ] && mv $APP_DIR/frontend $APP_DIR/frontend.bak
-
-    tar -xzf /tmp/toolhub-code.tar.gz -C $APP_DIR
-
-    # Restore venv
-    if [ -d /tmp/toolhub-venv-preserve ]; then
-        log "Restoring preserved venv..."
-        rm -rf $APP_DIR/backend/venv # Clean any partial restores
-        mv /tmp/toolhub-venv-preserve $APP_DIR/backend/venv
-    fi
-
-
-
-    chown -R $APP_USER:$APP_USER $APP_DIR
+    chown -R $APP_USER:$APP_USER "$STAGING_DIR"
 else
     error "Code tarball missing at /tmp/toolhub-code.tar.gz"
 fi
 
-# 5. Environment Config
-step "5/10" "Applying environment configuration..."
-[ -f /tmp/backend.env ] && cp /tmp/backend.env $APP_DIR/backend/.env
-[ -f /tmp/frontend.env ] && cp /tmp/frontend.env $APP_DIR/frontend/.env.local
+# 5. Environment Config (to Staging)
+step "5/10" "Applying environment configuration to staging..."
+[ -f /tmp/backend.env ] && cp /tmp/backend.env "$STAGING_DIR/backend/.env"
+[ -f /tmp/frontend.env ] && cp /tmp/frontend.env "$STAGING_DIR/frontend/.env.local"
 
-# Robustness check: if .env is missing in the backend dir, try to restore from a backup if it exists
-if [ ! -f "$APP_DIR/backend/.env" ]; then
-    log "Backend .env missing. Searching for backup..."
-    BACKUP_ENV=$(find $APP_DIR -name ".env" | grep "bak" | head -n 1)
-    if [ -n "$BACKUP_ENV" ]; then
-        cp "$BACKUP_ENV" "$APP_DIR/backend/.env"
-        log "Restored .env from backup: $BACKUP_ENV"
+# Robustness check: if .env is missing in the backend staging dir, try to restore from prod
+if [ ! -f "$STAGING_DIR/backend/.env" ]; then
+    log "Backend .env missing in staging. Searching for prod/backup..."
+    if [ -f "$APP_DIR/backend/.env" ]; then
+        cp "$APP_DIR/backend/.env" "$STAGING_DIR/backend/.env"
+        log "Restored .env from prod."
     fi
 fi
 
-chown $APP_USER:$APP_USER $APP_DIR/backend/.env $APP_DIR/frontend/.env.local
-chmod 600 $APP_DIR/backend/.env $APP_DIR/frontend/.env.local
+chown $APP_USER:$APP_USER "$STAGING_DIR/backend/.env" "$STAGING_DIR/frontend/.env.local"
+chmod 600 "$STAGING_DIR/backend/.env" "$STAGING_DIR/frontend/.env.local"
 
-# 6. Database Setup
+# 6. Database Setup (Can run while system is alive as it is additive usually)
 step "6/10" "Synchronizing database credentials..."
-# Extract credentials from .env
-DB_URL=$(grep "^DATABASE_URL=" $APP_DIR/backend/.env | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+# Extract credentials from staging .env
+DB_URL=$(grep "^DATABASE_URL=" "$STAGING_DIR/backend/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
 # Extract user, pass, host, port, dbname from URL: postgresql+asyncpg://user:pass@host:port/dbname
 DB_USER_EXTRACTED=$(echo $DB_URL | sed 's/.*:\/\/\([^:]*\):.*/\1/')
 DB_PASS_EXTRACTED=$(echo $DB_URL | sed 's/.*:\/\/.*:\([^@]*\)@.*/\1/')
@@ -331,7 +320,6 @@ DB_NAME_EXTRACTED=$(echo $DB_URL | sed 's/.*\/\([^?\/]*\).*/\1/')
 
 log "Syncing user: $DB_USER_EXTRACTED"
 # Create or Update User
-# Run from /tmp to avoid "could not change directory" errors
 cd /tmp
 sudo -u postgres psql -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$DB_USER_EXTRACTED') THEN CREATE ROLE $DB_USER_EXTRACTED WITH LOGIN PASSWORD '$DB_PASS_EXTRACTED'; ELSE ALTER ROLE $DB_USER_EXTRACTED WITH PASSWORD '$DB_PASS_EXTRACTED'; END IF; END \$\$;"
 
@@ -342,83 +330,75 @@ if [ "$FIRST_TIME" = true ] || ! sudo -u postgres psql -lqt | cut -d \| -f 1 | g
     sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME_EXTRACTED TO $DB_USER_EXTRACTED;" || true
 fi
 
-# Always ensure schema permissions (helpful if user was created manually)
+# Always ensure schema permissions
 sudo -u postgres psql -d $DB_NAME_EXTRACTED -c "GRANT ALL ON SCHEMA public TO $DB_USER_EXTRACTED;" || true
 
-# 7. Backend Setup
-step "7/10" "Building backend..."
+# 7. Backend Setup (In Staging)
+step "7/10" "Building backend in staging..."
 
-# Create venv only if it doesn't already exist (preserved from previous deploy)
-if [ ! -d "$APP_DIR/backend/venv" ]; then
-    log "Creating virtual environment..."
-    python${PYTHON_VERSION} -m venv $APP_DIR/backend/venv
-    chown -R $APP_USER:$APP_USER $APP_DIR/backend/venv
-else
-    log "Virtual environment already exists. Skipping creation."
+# Create venv in staging if missing
+if [ ! -d "$STAGING_DIR/backend/venv" ]; then
+    log "Creating new virtual environment in staging..."
+    python${PYTHON_VERSION} -m venv "$STAGING_DIR/backend/venv"
+    chown -R $APP_USER:$APP_USER "$STAGING_DIR/backend/venv"
 fi
 
-# Use python -m pip for safer execution
-PIP_CMD="sudo -u $APP_USER $APP_DIR/backend/venv/bin/python${PYTHON_VERSION} -m pip install --prefer-binary --no-cache-dir"
+PIP_CMD="sudo -u $APP_USER $STAGING_DIR/backend/venv/bin/python${PYTHON_VERSION} -m pip install --prefer-binary --no-cache-dir"
 
 log "System status before pip upgrade:"
 free -m
-# Run as root if user-level is being killed by malware
-python${PYTHON_VERSION} -m pip install --upgrade pip || $PIP_CMD --upgrade pip
+$PIP_CMD --upgrade pip || python${PYTHON_VERSION} -m pip install --upgrade pip
 
-log "System status before requirements install:"
-free -m
-if ! $PIP_CMD -r $APP_DIR/backend/requirements.txt; then
-    warn "Pip requirements installation failed. Inspecting system state..."
-    free -m
-    error "Backend requirements installation failed."
+log "Installing backend requirements in staging..."
+if ! $PIP_CMD -r "$STAGING_DIR/backend/requirements.txt"; then
+    error "Backend requirements installation failed in staging."
 fi
 
-# Install Playwright browsers (Chromium) and system dependencies
-log "Installing Playwright Chromium browser and system dependencies..."
-sudo $APP_DIR/backend/venv/bin/playwright install chromium
-sudo $APP_DIR/backend/venv/bin/playwright install-deps chromium
+# Install Playwright browser
+log "Installing Playwright Chromium in staging..."
+sudo "$STAGING_DIR/backend/venv/bin/playwright" install chromium
+sudo "$STAGING_DIR/backend/venv/bin/playwright" install-deps chromium
 
-# Database initialization/migration
-# We check the actual DB state because FIRST_TIME might be false if folders existed from a failed run
-# Check if essential tables exist
-TABLES_MISSING=false
-for table in "users" "usage_history" "page_visit"; do
-    EXISTS=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '$table');" || echo "f")
-    if [ "$EXISTS" = "f" ]; then
-        log "Table '$table' is missing."
-        TABLES_MISSING=true
-    fi
-done
+# Database initialization (Runs against live DB)
+log "Applying database schema changes..."
+sudo -u $APP_USER bash -c "cd $STAGING_DIR/backend && $STAGING_DIR/backend/venv/bin/python setup_db.py"
+sudo -u $APP_USER bash -c "cd $STAGING_DIR/backend && $STAGING_DIR/backend/venv/bin/alembic upgrade head" || true
 
-HAS_ALEMBIC=$(sudo -u postgres psql -d $DB_NAME_EXTRACTED -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version');" || echo "f")
+# 8. Frontend Build (In Staging)
+step "8/10" "Building frontend in staging..."
+chown -R $APP_USER:$APP_USER "$STAGING_DIR/frontend"
+rm -rf "$STAGING_DIR/frontend/.next"
 
-if [ "$TABLES_MISSING" = "true" ]; then
-    log "Database schema is incomplete. Initializing with setup_db.py..."
-    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/python setup_db.py"
-    log "Stamping migration version as head..."
-    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
-elif [ "$HAS_ALEMBIC" = "f" ]; then
-    log "Tables exist but no migration record found. Stamping head..."
-    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic stamp head"
-else
-    log "Database is ready. Running any pending migrations..."
-    sudo -u $APP_USER bash -c "cd $APP_DIR/backend && $APP_DIR/backend/venv/bin/alembic upgrade head"
-fi
+log "Installing frontend dependencies in staging..."
+sudo -u $APP_USER bash -c "cd $STAGING_DIR/frontend && npm install"
+log "Running frontend build in staging..."
+sudo -u $APP_USER bash -c "cd "$STAGING_DIR/frontend" && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
 
-# 8. Frontend Build
-step "8/10" "Building frontend..."
-# Ensure ownership is correct before building
-chown -R $APP_USER:$APP_USER $APP_DIR/frontend
-# Preserve .next/cache if possible? No, we delete .next.
-sudo -u $APP_USER rm -rf $APP_DIR/frontend/.next
+# 9. ATOMIC SWAP PHASE
+step "9/10" "Performing ATOMIC SWAP..."
 
-log "Installing frontend dependencies..."
-log "Installing frontend dependencies..."
-sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && npm install"
-sudo -u $APP_USER bash -c "cd $APP_DIR/frontend && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
+# Now we stop the services
+log "Stopping production services for swap..."
+systemctl stop tulz-api tulz-web || true
 
-# 9. Systemd Services
-step "9/10" "Updating systemd services..."
+# Perform security cleanup now that apps are stopped
+security_cleanup
+
+log "Swapping staging to production..."
+# Backup current
+rm -rf "$APP_DIR/backend.bak" "$APP_DIR/frontend.bak"
+[ -d "$APP_DIR/backend" ] && mv "$APP_DIR/backend" "$APP_DIR/backend.bak"
+[ -d "$APP_DIR/frontend" ] && mv "$APP_DIR/frontend" "$APP_DIR/frontend.bak"
+
+# Move staging to prod
+mv "$STAGING_DIR/backend" "$APP_DIR/backend"
+mv "$STAGING_DIR/frontend" "$APP_DIR/frontend"
+
+chown -R $APP_USER:$APP_USER $APP_DIR
+
+# Update systemd services if needed
+log "Updating systemd configurations..."
+# (Previous systemd cat commands remain mostly the same, but let's ensure paths)
 cat > /etc/systemd/system/tulz-api.service <<EOF
 [Unit]
 Description=Tulz API
