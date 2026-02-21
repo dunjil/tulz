@@ -7,13 +7,18 @@
 set -e
 
 # Error handling - capture kernel logs on failure
-trap 'echo -e "\n${RED}[ERROR]${NC} Script failed at line $LINENO on command: $BASH_COMMAND"; \
-      echo "Capturing system state..."; \
-      free -m || true; df -h || true; \
-      echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50 || true; \
-      echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager || true; \
-      echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
-      exit 1' ERR
+error_handler() {
+    local exit_code=$?
+    local line_no=$1
+    local command="$2"
+    echo -e "\n${RED}[ERROR]${NC} Script failed at line $line_no on command: $command (Exit code: $exit_code)"
+    echo "Capturing system state..."
+    free -m || true; df -h || true; \
+    echo -e "\n--- Last 20 lines of dmesg ---"; dmesg | tail -n 20 || true; \
+    echo -e "\n--- Last 20 lines of journalctl ---"; journalctl -n 20 --no-pager || true; \
+    exit $exit_code
+}
+trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
 
 # Security Cleanup - Kill rogue processes and crontabs
 security_cleanup() {
@@ -59,6 +64,11 @@ security_cleanup() {
 # Set base firewall rules (SSH/Web)
 setup_firewall_base() {
     step "Security" "Setting up base firewall rules..."
+    if ! command -v ufw >/dev/null; then
+        warn "ufw not found. Skipping firewall setup (it will be installed in step 2)."
+        return 0
+    fi
+
     ufw default deny incoming
     ufw default allow outgoing
     
@@ -67,27 +77,26 @@ setup_firewall_base() {
     ufw allow 'Nginx Full'
     
     # Enable if not enabled
-    if command -v ufw >/dev/null; then
-        ufw --force enable
-        log "Base firewall enforced."
-    else
-        warn "ufw not found. Skipping firewall setup (it will be installed in step 2)."
-    fi
+    ufw --force enable
+    log "Base firewall enforced."
 }
 
 # Block Port 25 Outbound (Run after deployment)
 block_smtp_outbound() {
     step "Security" "Locking down SMTP (Port 25/465/587)..."
+    if ! command -v ufw >/dev/null; then
+        warn "ufw not found. Cannot block SMTP ports."
+        return 0
+    fi
+
     # CRITICAL: BLOCK Port 25 Outbound (Stop the spam bot)
     ufw deny out 25/tcp
     ufw deny out 465/tcp
     ufw deny out 587/tcp
     
     # Re-enable to ensure rules apply
-    if command -v ufw >/dev/null; then
-        ufw --force enable
-        log "SMTP Outbound blocked."
-    fi
+    ufw --force enable
+    log "SMTP Outbound blocked."
 }
 
 # Audit Cgroup and Shell limits
@@ -106,9 +115,6 @@ audit_limits() {
     
     # Check systemwide per-process limit if exists
     [ -f /sys/fs/cgroup/memory.max ] && log "Global Cgroup v2 Memory Max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo 'unlimited')"
-    
-    # Check shell limits
-    ulimit -a || true
 }
 
 # Deep Malware Hunt - look for persistence
