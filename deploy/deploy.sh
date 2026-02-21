@@ -14,15 +14,20 @@ error_handler() {
     local command="$2"
     echo -e "\n${RED}[FATAL ERROR]${NC} Deployment failed at line $line_no"
     echo -e "${RED}[COMMAND]${NC} $command"
-    echo -e "${RED}[EXIT CODE]${NC} $exit_code"
     
+    # SYSTEM RECOVERY: If we moved the venv but failed to restore it, do it now.
+    if [ -d "/tmp/toolhub-venv-preserve" ] && [ ! -d "$APP_DIR/backend/venv" ]; then
+        echo "Recovering virtual environment from /tmp..."
+        mkdir -p "$APP_DIR/backend"
+        mv /tmp/toolhub-venv-preserve "$APP_DIR/backend/venv" || true
+    fi
+
     echo "Attempting to restart services to minimize downtime..."
     systemctl start tulz-api tulz-web || true
     
-    echo -e "\n--- Process Diagnostics ---"
-    free -m || true; df -h || true; \
-    echo -e "\n--- Last 20 lines of dmesg ---"; dmesg | tail -n 20 || true; \
-    echo -e "\n--- Last 20 lines of journalctl ---"; journalctl -n 20 --no-pager || true; \
+    echo -e "\n--- Quick Diagnostics ---"
+    free -m || echo "free command failed"
+    df -h / || echo "df command failed"
     exit $exit_code
 }
 trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
@@ -286,6 +291,7 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
     # Restore venv
     if [ -d /tmp/toolhub-venv-preserve ]; then
         log "Restoring preserved venv..."
+        rm -rf $APP_DIR/backend/venv # Clean any partial restores
         mv /tmp/toolhub-venv-preserve $APP_DIR/backend/venv
     fi
 
