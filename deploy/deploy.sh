@@ -37,18 +37,34 @@ trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
 # Non-destructive malware purge (Safe to run while app is online)
 malware_purge() {
     log "[START] malware_purge"
-    log "Purging malicious files and rogue miners..."
+    log "Performing NUCLEAR malware purge..."
     
-    # Kill any processes matching known malware signatures
+    # 1. Clear LD_PRELOAD hijacking
+    if [ -f /etc/ld.so.preload ]; then
+        log "WARNING: /etc/ld.so.preload detected. Clearing it to remove rootkit hooks..."
+        echo "" > /etc/ld.so.preload
+    fi
+
+    # 2. Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
     pkill -9 -f "x86_64" || true
     
-    # Clean /tmp and /var/tmp of suspicious files (specific patterns found in logs)
+    # 3. Clean /tmp, /var/tmp and /dev/shm of suspicious files and hidden Unix folders
+    log "Purging malicious files and hidden Unix folders..."
     rm -rf /tmp/.*.kok /tmp/*.kok /tmp/.b_* /tmp/kok* /tmp/.x /tmp/.monitor /tmp/logic.sh || true
+    rm -rf /tmp/.XIM-unix /tmp/.ICE-unix /tmp/.font-unix || true
     rm -rf /var/tmp/.b_* /var/tmp/.monitor || true
     rm -rf /dev/shm/*.kok || true
     
-    # KILL processes using port 25 (SMTP) - This is where the leak is
+    # 4. Reset toolhub user shell profiles to remove persistence
+    if [ -d "/home/$APP_USER" ]; then
+        log "Neutralizing shell profiles for $APP_USER..."
+        # Backup then clear
+        [ -f "/home/$APP_USER/.bashrc" ] && cp "/home/$APP_USER/.bashrc" "/home/$APP_USER/.bashrc.bak" && echo -e "case \$- in *i*) ;; *) return;; esac\n[ -z \"\$PS1\" ] && return" > "/home/$APP_USER/.bashrc"
+        [ -f "/home/$APP_USER/.profile" ] && cp "/home/$APP_USER/.profile" "/home/$APP_USER/.profile.bak" && echo "" > "/home/$APP_USER/.profile"
+    fi
+
+    # 5. KILL processes using port 25 (SMTP)
     if command -v lsof >/dev/null; then
         lsof -i :25 -t | xargs -r kill -9 2>/dev/null || true
     fi
@@ -350,43 +366,45 @@ step "7/10" "Building backend in staging..."
 if [ ! -d "$STAGING_DIR/backend/venv" ]; then
     log "Creating new virtual environment in staging..."
     python${PYTHON_VERSION} -m venv "$STAGING_DIR/backend/venv"
-    chown -R $APP_USER:$APP_USER "$STAGING_DIR/backend/venv"
 fi
 
-PIP_CMD="sudo -u $APP_USER $STAGING_DIR/backend/venv/bin/python${PYTHON_VERSION} -m pip install --prefer-binary --no-cache-dir"
+# ROOT-BUILD STRATEGY: Run installations as root to bypass user-targeted watchdogs
+# We will fix permissions afterwards.
+PIP_CMD="$STAGING_DIR/backend/venv/bin/python${PYTHON_VERSION} -m pip install --prefer-binary --no-cache-dir"
 
-log "System status before pip upgrade:"
+log "System status before pip upgrade (Running as ROOT):"
 free -m
-# Use system python to upgrade pip in venv, with a timeout to detect 'Killed'
-timeout 120s $PIP_CMD --upgrade pip || {
-    warn "Pip upgrade in venv failed or was killed. Attempting system-level repair..."
-    python${PYTHON_VERSION} -m pip install --upgrade pip --user || true
-    $PIP_CMD --upgrade pip || warn "Pip upgrade still failing"
-}
-log "Installing backend requirements in staging..."
+$PIP_CMD --upgrade pip || python${PYTHON_VERSION} -m pip install --upgrade pip
+
+log "Installing backend requirements in staging (Running as ROOT)..."
 if ! $PIP_CMD -r "$STAGING_DIR/backend/requirements.txt"; then
     error "Backend requirements installation failed in staging."
 fi
 
 # Install Playwright browser
-log "Installing Playwright Chromium in staging..."
-sudo "$STAGING_DIR/backend/venv/bin/playwright" install chromium
-sudo "$STAGING_DIR/backend/venv/bin/playwright" install-deps chromium
+log "Installing Playwright Chromium in staging (Running as ROOT)..."
+"$STAGING_DIR/backend/venv/bin/playwright" install chromium
+"$STAGING_DIR/backend/venv/bin/playwright" install-deps chromium
 
 # Database initialization (Runs against live DB)
 log "Applying database schema changes..."
-sudo -u $APP_USER bash -c "cd $STAGING_DIR/backend && $STAGING_DIR/backend/venv/bin/python setup_db.py"
-sudo -u $APP_USER bash -c "cd $STAGING_DIR/backend && $STAGING_DIR/backend/venv/bin/alembic upgrade head" || true
+# Use root to run the scripts to ensure they aren't killed
+cd $STAGING_DIR/backend
+$STAGING_DIR/backend/venv/bin/python setup_db.py
+$STAGING_DIR/backend/venv/bin/alembic upgrade head || true
 
 # 8. Frontend Build (In Staging)
-step "8/10" "Building frontend in staging..."
-chown -R $APP_USER:$APP_USER "$STAGING_DIR/frontend"
+step "8/10" "Building frontend in staging (Running as ROOT)..."
 rm -rf "$STAGING_DIR/frontend/.next"
 
 log "Installing frontend dependencies in staging..."
-sudo -u $APP_USER bash -c "cd $STAGING_DIR/frontend && npm install"
+(cd "$STAGING_DIR/frontend" && npm install)
 log "Running frontend build in staging..."
-sudo -u $APP_USER bash -c "cd "$STAGING_DIR/frontend" && NODE_OPTIONS=--max-old-space-size=2048 npm run build"
+(cd "$STAGING_DIR/frontend" && NODE_OPTIONS=--max-old-space-size=2048 npm run build)
+
+# RESTORE PERMISSIONS BEFORE SWAP
+log "Restoring staging permissions to $APP_USER..."
+chown -R $APP_USER:$APP_USER "$STAGING_DIR"
 
 # 9. ATOMIC SWAP PHASE
 step "9/10" "Performing ATOMIC SWAP..."
