@@ -3,6 +3,7 @@
 # ToolHub - VPS Deployment Script (Streamlined)
 # Handles setup and updates for Ubuntu 22.04+
 # ============================================================
+SCRIPT_VERSION="1.0.4 - Diagnostic"
 
 set -e
 
@@ -11,8 +12,14 @@ error_handler() {
     local exit_code=$?
     local line_no=$1
     local command="$2"
-    echo -e "\n${RED}[ERROR]${NC} Script failed at line $line_no on command: $command (Exit code: $exit_code)"
-    echo "Capturing system state..."
+    echo -e "\n${RED}[FATAL ERROR]${NC} Deployment failed at line $line_no"
+    echo -e "${RED}[COMMAND]${NC} $command"
+    echo -e "${RED}[EXIT CODE]${NC} $exit_code"
+    
+    echo "Attempting to restart services to minimize downtime..."
+    systemctl start tulz-api tulz-web || true
+    
+    echo -e "\n--- Process Diagnostics ---"
     free -m || true; df -h || true; \
     echo -e "\n--- Last 20 lines of dmesg ---"; dmesg | tail -n 20 || true; \
     echo -e "\n--- Last 20 lines of journalctl ---"; journalctl -n 20 --no-pager || true; \
@@ -22,6 +29,7 @@ trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
 
 # Security Cleanup - Kill rogue processes and crontabs
 security_cleanup() {
+    log "[START] security_cleanup"
     log "Performing NUCLEAR security cleanup..."
     # Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
@@ -58,11 +66,12 @@ security_cleanup() {
     pkill -9 -f "headless_shell" || true
     pkill -9 -f "chromium" || true
     
-    log "Security cleanup completed."
+    log "[END] security_cleanup"
 }
 
 # Set base firewall rules (SSH/Web)
 setup_firewall_base() {
+    log "[START] setup_firewall_base"
     step "Security" "Setting up base firewall rules..."
     if ! command -v ufw >/dev/null; then
         warn "ufw not found. Skipping firewall setup (it will be installed in step 2)."
@@ -79,6 +88,7 @@ setup_firewall_base() {
     # Enable if not enabled
     ufw --force enable
     log "Base firewall enforced."
+    log "[END] setup_firewall_base"
 }
 
 # Block Port 25 Outbound (Run after deployment)
@@ -101,6 +111,7 @@ block_smtp_outbound() {
 
 # Audit Cgroup and Shell limits
 audit_limits() {
+    log "[START] audit_limits"
     log "Auditing resource limits (Cgroups)..."
     # Find current process cgroup
     CGROUP_PATH=$(cat /proc/self/cgroup 2>/dev/null | head -n 1 | cut -d: -f3 || echo "")
@@ -115,10 +126,12 @@ audit_limits() {
     
     # Check systemwide per-process limit if exists
     [ -f /sys/fs/cgroup/memory.max ] && log "Global Cgroup v2 Memory Max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo 'unlimited')"
+    log "[END] audit_limits"
 }
 
 # Deep Malware Hunt - look for persistence
 deep_malware_hunt() {
+    log "[START] deep_malware_hunt"
     log "Searching for malware persistence in system folders..."
     # Check systemd for suspicious services
     grep -rliE "kok|x86_64" /etc/systemd/system /lib/systemd/system /etc/cron* /etc/rc.local /etc/init.d 2>/dev/null || true
@@ -159,7 +172,7 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[$1]${NC} $2"; }
 
 # 0. Graceful Stop & Security Cleanup
-step "0/10" "Stopping services and cleaning up..."
+step "0/10" "Stopping services and cleaning up... (Script Version: $SCRIPT_VERSION)"
 # Stop services first to avoid race conditions with cleanup
 systemctl stop tulz-api tulz-web || true
 
