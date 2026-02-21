@@ -92,7 +92,7 @@ export default function PDFToWordPage() {
     showProgress({ status: "uploading", fileName: selectedFiles[0].name });
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
-    setTimeout(() => setStatus("processing", "Converting to Word..."), 500);
+    setStatus("processing", "Converting to Word...");
     toWordMutation.mutate(formData);
   };
 

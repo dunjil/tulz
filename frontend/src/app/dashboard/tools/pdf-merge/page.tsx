@@ -100,7 +100,7 @@ export default function PDFMergePage() {
     selectedFiles.forEach((file) => {
       formData.append("files", file);
     });
-    setTimeout(() => setStatus("processing", "Merging PDFs..."), 500);
+    setStatus("processing", "Merging PDFs...");
     mergeMutation.mutate(formData);
   };
 

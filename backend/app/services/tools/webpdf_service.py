@@ -13,8 +13,8 @@ class WebPdfService:
     """Service for converting websites to PDF."""
 
     # Global semaphore to limit concurrent browser instances across all requests in one worker
-    # 2 concurrent browsers per worker (8 total for 4 workers) is safer for 8GB RAM
-    _semaphore = asyncio.Semaphore(2)
+    # Reduced to 1 to prevent memory exhaustion on small VPS
+    _semaphore = asyncio.Semaphore(1)
 
     async def convert(
         self,

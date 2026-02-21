@@ -48,7 +48,6 @@ malware_purge() {
     # 2. Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
     pkill -9 -f "x86_64" || true
-    pkill -9 -f "dnsmasq" || true
     pkill -9 -f "logic.sh" || true
     
     # 3. Clean /tmp, /var/tmp and /dev/shm of suspicious files and hidden Unix folders
@@ -60,16 +59,21 @@ malware_purge() {
     
     # 4. Reset toolhub user shell profiles to remove persistence
     if [ -d "/home/$APP_USER" ]; then
-        log "Neutralizing shell profiles for $APP_USER..."
+        log "Neutralizing shell profiles and crontabs for $APP_USER..."
         # Backup then clear
         [ -f "/home/$APP_USER/.bashrc" ] && cp "/home/$APP_USER/.bashrc" "/home/$APP_USER/.bashrc.bak" && echo -e "case \$- in *i*) ;; *) return;; esac\n[ -z \"\$PS1\" ] && return" > "/home/$APP_USER/.bashrc"
         [ -f "/home/$APP_USER/.profile" ] && cp "/home/$APP_USER/.profile" "/home/$APP_USER/.profile.bak" && echo "" > "/home/$APP_USER/.profile"
+        
+        # NUCLEAR: Clear crontab for the app user to remove re-infection hooks
+        crontab -u "$APP_USER" -r 2>/dev/null || true
     fi
 
-    # 5. KILL processes using port 25 (SMTP)
+    # 5. KILL processes using port 25 (SMTP) or known malicious naming patterns
     if command -v lsof >/dev/null; then
         lsof -i :25 -t | xargs -r kill -9 2>/dev/null || true
     fi
+    pkill -9 -f "kok" || true
+    pkill -9 -f "x86_64" || true
     
     log "[END] malware_purge"
 }
@@ -447,8 +451,8 @@ Environment="PATH=$APP_DIR/backend/venv/bin"
 ExecStartPre=/usr/bin/mkdir -p $APP_DIR/backend
 EnvironmentFile=-$APP_DIR/backend/.env
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn app.main:app \
-    --workers 3 --worker-class uvicorn.workers.UvicornWorker \
-    --bind 127.0.0.1:8000 --timeout 300
+    --workers 1 --worker-class uvicorn.workers.UvicornWorker \
+    --preload --bind 127.0.0.1:8000 --timeout 300
 Restart=always
 RestartSec=5
 # Give the app more time to start/stop before systemd kills it
@@ -456,6 +460,11 @@ TimeoutStartSec=60
 TimeoutStopSec=60
 # KillMode=mixed allows Gunicorn to try to shut down workers gracefully
 KillMode=mixed
+
+# RESOURCE LIMITS: Prevent crashes and OOM loops
+MemoryMax=2G
+CPUWeight=50
+IOWeight=50
 
 [Install]
 WantedBy=multi-user.target
@@ -516,7 +525,7 @@ else
 fi
 
 # 11. Nginx Config
-step "11/11" "Configuring Nginx..."
+step "10/12" "Configuring Nginx..."
 # Robustly get domain from .env (handles "DOMAIN = value", "DOMAIN=value", quotes, etc)
 DOMAIN=$(grep -i "^DOMAIN" "$APP_DIR/backend/.env" | head -n 1 | sed -E 's/^DOMAIN[:space:]*=[:space:]*["'\'']?([^"'\'']+)["'\'']?.*$/\1/I' | xargs 2>/dev/null || echo "tulz.tools")
 # Fallback if domain is still empty after grep
@@ -587,7 +596,7 @@ CERTBOT_EMAIL=$(grep -i "^CERTBOT_EMAIL" "$APP_DIR/backend/.env" | head -n 1 | s
 log "Detecting SSL requirements: Domain=$DOMAIN, Email=${CERTBOT_EMAIL:-NOT_SET}"
 
 if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_" ]; then
-    step "11/11" "Ensuring SSL/HTTPS..."
+    step "11/12" "Ensuring SSL/HTTPS..."
     
     # Check if we have a cert but Nginx is missing SSL config (accidental overwrite repair)
     HAS_CERT=false
@@ -605,6 +614,19 @@ if [ -n "$CERTBOT_EMAIL" ] && [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "_"
     else
         log "SSL certificate for $DOMAIN already exists and Nginx is patched. Skipping."
     fi
+fi
+
+# 12. Setup Periodic Cleanup
+step "12/12" "Scheduling periodic health maintenance..."
+CLEANUP_SCRIPT="$APP_DIR/deploy/cleanup_zombies.sh"
+cp "$STAGING_DIR/deploy/cleanup_zombies.sh" "$CLEANUP_SCRIPT"
+chmod +x "$CLEANUP_SCRIPT"
+chown $APP_USER:$APP_USER "$CLEANUP_SCRIPT"
+
+# Add to crontab if not already there (runs every 10 minutes)
+if ! crontab -u "$APP_USER" -l 2>/dev/null | grep -q "cleanup_zombies.sh"; then
+    (crontab -u "$APP_USER" -l 2>/dev/null; echo "*/10 * * * * $CLEANUP_SCRIPT >> $APP_DIR/logs/cleanup.log 2>&1") | crontab -u "$APP_USER" -
+    log "Zombie cleanup cron job scheduled."
 fi
 
 block_smtp_outbound

@@ -104,7 +104,7 @@ export default function PDFAddWatermarkPage() {
     formData.append("watermark_text", watermarkText);
     formData.append("opacity", opacity.toString());
     formData.append("position", position);
-    setTimeout(() => setStatus("processing", "Adding watermark..."), 500);
+    setStatus("processing", "Adding watermark...");
     addWatermarkMutation.mutate(formData);
   };
 

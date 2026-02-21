@@ -100,7 +100,7 @@ export default function PDFUnlockPage() {
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
     formData.append("password", password);
-    setTimeout(() => setStatus("processing", "Unlocking PDF..."), 500);
+    setStatus("processing", "Unlocking PDF...");
     unlockMutation.mutate(formData);
   };
 

@@ -331,6 +331,20 @@ const toolsNavigation = [
     isFree: true,
   },
   {
+    name: "PDF to Excel",
+    href: "/dashboard/tools/pdf-to-excel",
+    icon: Sheet,
+    gradient: "from-green-600 to-emerald-600",
+    isFree: true,
+  },
+  {
+    name: "PDF to PowerPoint",
+    href: "/dashboard/tools/pdf-to-powerpoint",
+    icon: Presentation,
+    gradient: "from-red-600 to-orange-600",
+    isFree: true,
+  },
+  {
     name: "PDF Filler",
     href: "/dashboard/tools/pdf-filler",
     icon: PenTool,

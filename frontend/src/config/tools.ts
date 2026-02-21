@@ -143,9 +143,23 @@ export const toolsConfig: ToolConfig[] = [
     },
     {
         slug: "powerpoint-to-pdf",
-        title: "PowerPoint to PDF Converter | Tulz",
+        title: "Powerpoint to PDF Converter | Tulz",
         description: "Convert PowerPoint presentations (PPT, PPTX) to PDF. Save slides as PDF documents.",
         keywords: ["ppt to pdf", "powerpoint to pdf", "convert pptx to pdf", "presentation to pdf"],
+        category: "pdf",
+    },
+    {
+        slug: "pdf-to-excel",
+        title: "PDF to Excel Converter - Free Online | Tulz",
+        description: "Convert PDF files to editable Excel spreadsheets (XLSX). Extract tables and data accurately for analysis.",
+        keywords: ["pdf to excel", "convert pdf to xlsx", "pdf table extractor", "pdf data to excel"],
+        category: "pdf",
+    },
+    {
+        slug: "pdf-to-powerpoint",
+        title: "PDF to PowerPoint Converter - Free Online | Tulz",
+        description: "Convert PDF pages into editable PowerPoint presentations (PPTX). Save your documents as slides.",
+        keywords: ["pdf to powerpoint", "convert pdf to pptx", "pdf to slides", "pdf presentation maker"],
         category: "pdf",
     },
 

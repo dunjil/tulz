@@ -100,7 +100,7 @@ export default function PDFCompressPage() {
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
     formData.append("compression_level", compressionLevel);
-    setTimeout(() => setStatus("processing", "Compressing PDF..."), 500);
+    setStatus("processing", "Compressing PDF...");
     compressMutation.mutate(formData);
   };
 

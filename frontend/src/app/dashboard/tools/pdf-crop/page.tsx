@@ -94,7 +94,7 @@ export default function PDFCropPage() {
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
     formData.append("margin", cropMargin.toString());
-    setTimeout(() => setStatus("processing", "Cropping PDF..."), 500);
+    setStatus("processing", "Cropping PDF...");
     cropMutation.mutate(formData);
   };
 

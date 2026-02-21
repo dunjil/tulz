@@ -100,7 +100,7 @@ export default function PDFOrganizePage() {
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
     formData.append("page_order", pageOrder);
-    setTimeout(() => setStatus("processing", "Organizing PDF..."), 500);
+    setStatus("processing", "Organizing pages...");
     organizeMutation.mutate(formData);
   };
 

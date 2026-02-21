@@ -84,7 +84,7 @@ export default function ImageCompressPage() {
         formData.append("output_format", cropFormat);
         formData.append("quality", quality.toString());
 
-        setTimeout(() => setStatus("processing", "Cropping image..."), 500);
+        setStatus("processing", "Cropping image...");
         processMutation.mutate(formData);
     };
 

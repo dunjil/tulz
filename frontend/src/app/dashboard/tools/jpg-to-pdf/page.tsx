@@ -98,7 +98,7 @@ export default function JPGToPDFPage() {
     selectedFiles.forEach((file) => {
       formData.append("files", file);
     });
-    setTimeout(() => setStatus("processing", "Converting to PDF..."), 500);
+    setStatus("processing", "Generating PDF...");
     fromJPGMutation.mutate(formData);
   };
 

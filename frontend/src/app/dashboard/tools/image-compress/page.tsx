@@ -86,7 +86,7 @@ export default function ImageCompressPage() {
         formData.append("output_format", compressFormat);
         formData.append("quality", quality.toString());
 
-        setTimeout(() => setStatus("processing", "Compressing image..."), 500);
+        setStatus("processing", "Compressing image...");
         processMutation.mutate(formData);
     };
 

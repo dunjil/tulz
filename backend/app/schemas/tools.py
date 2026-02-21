@@ -349,6 +349,8 @@ class PDFOperation(str, Enum):
     SPLIT = "split"
     COMPRESS = "compress"
     TO_WORD = "to_word"
+    TO_EXCEL = "to_excel"
+    TO_POWERPOINT = "to_powerpoint"
 
 
 class PDFSplitRequest(BaseModel):

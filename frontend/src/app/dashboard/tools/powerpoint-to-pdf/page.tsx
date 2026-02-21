@@ -91,7 +91,7 @@ export default function PowerPointToPDFPage() {
     showProgress({ status: "uploading", fileName: selectedFiles[0].name });
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
-    setTimeout(() => setStatus("processing", "Converting to PDF..."), 500);
+    setStatus("processing", "Converting presentation...");
     pptToPDFMutation.mutate(formData);
   };
 

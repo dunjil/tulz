@@ -96,7 +96,7 @@ export default function PDFPageNumbersPage() {
     formData.append("file", selectedFiles[0]);
     formData.append("position", position);
     formData.append("format", format);
-    setTimeout(() => setStatus("processing", "Adding page numbers..."), 500);
+    setStatus("processing", "Adding page numbers...");
     addPageNumbersMutation.mutate(formData);
   };
 

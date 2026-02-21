@@ -85,7 +85,7 @@ export default function ImageCompressPage() {
         formData.append("output_format", outputFormat);
         formData.append("quality", quality.toString());
 
-        setTimeout(() => setStatus("processing", "Removing background..."), 500);
+        setStatus("processing", "Removing background...");
         processMutation.mutate(formData);
     };
 

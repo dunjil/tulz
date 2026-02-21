@@ -101,7 +101,7 @@ export default function PDFSplitPage() {
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
     formData.append("page_ranges", pageRanges);
-    setTimeout(() => setStatus("processing", "Splitting PDF..."), 500);
+    setStatus("processing", "Splitting PDF...");
     splitMutation.mutate(formData);
   };
 

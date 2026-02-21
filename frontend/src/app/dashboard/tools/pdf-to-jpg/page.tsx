@@ -92,7 +92,7 @@ export default function PDFToJPGPage() {
     showProgress({ status: "uploading", fileName: selectedFiles[0].name });
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
-    setTimeout(() => setStatus("processing", "Converting to JPG..."), 500);
+    setStatus("processing", "Extracting pages...");
     toJPGMutation.mutate(formData);
   };
 

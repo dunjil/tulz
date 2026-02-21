@@ -2266,4 +2266,64 @@ export const guides: Guide[] = [
             ]
         },
     },
+    {
+        slug: "how-to-convert-pdf-to-excel",
+        title: "How to Convert PDF to Excel for Data Analysis",
+        description: "Easily extract tables from PDFs into editable Excel spreadsheets. Perfect for financial reports and data management.",
+        icon: FileSpreadsheet,
+        category: "PDF",
+        lastUpdated: "2026-02-21",
+        readTime: "3 min read",
+        relatedTool: {
+            name: "PDF to Excel",
+            href: "/dashboard/tools/pdf-to-excel",
+        },
+        content: {
+            intro: "PDFs are great for sharing, but terrible for analysis. This guide shows you how to convert your PDF tables into a usable Excel format.",
+            whyNeeded: "Manually re-typing data from a PDF into Excel is time-consuming and error-prone. Automated conversion saves hours and ensures accuracy.",
+            steps: [
+                { title: "Upload your PDF", description: "Drag and drop your PDF file into the Tulz PDF to Excel converter." },
+                { title: "Extract Tables", description: "Our tool automatically detects tables and structures them into rows and columns." },
+                { title: "Download as XLSX", description: "Get a clean Excel file ready for further analysis, sorting, and charting." }
+            ],
+            proTips: [
+                "Ensure your PDF tables have clear borders for best detection.",
+                "For complex layouts, you may need minor adjustments in Excel after conversion."
+            ],
+            faq: [
+                { q: "Does it work with scanned PDFs?", a: "It works best with digitally created PDFs. Scanned documents may require OCR first for text recognition." },
+                { q: "Is there a file size limit?", a: "Yes, files up to 50MB are supported." }
+            ]
+        }
+    },
+    {
+        slug: "how-to-convert-pdf-to-powerpoint",
+        title: "How to Convert PDF to PowerPoint for Presentations",
+        description: "Transform your PDF documents into editable PowerPoint slides. Ideal for repurposing content.",
+        icon: Presentation,
+        category: "PDF",
+        lastUpdated: "2026-02-21",
+        readTime: "3 min read",
+        relatedTool: {
+            name: "PDF to PowerPoint",
+            href: "/dashboard/tools/pdf-to-powerpoint",
+        },
+        content: {
+            intro: "Got a great PDF report but need to present it? Convert it into a dynamic PowerPoint presentation effortlessly.",
+            whyNeeded: "Presenting information from a PDF often involves screenshots or manual re-creation. Direct conversion saves significant time and maintains visual consistency.",
+            steps: [
+                { title: "Upload your PDF", description: "Use the Tulz PDF to PowerPoint tool to upload your document." },
+                { title: "Convert to Slides", description: "Our generator processes each page and converts it into a separate slide." },
+                { title: "Download PPTX", description: "Get your editable PowerPoint file, ready for customization and presentation." }
+            ],
+            proTips: [
+                "For best results, PDFs with simpler layouts convert more cleanly.",
+                "Every page is rendered as a slide-sized image to preserve perfect fonts and layout."
+            ],
+            faq: [
+                { q: "Can I edit the text in PowerPoint?", a: "In this version, pages are converted as high-resolution images to preserve exact layout. You can add text overlays in PowerPoint." },
+                { q: "What about images in the PDF?", a: "All visual elements, including images and charts, are preserved in the conversion." }
+            ]
+        }
+    }
 ];

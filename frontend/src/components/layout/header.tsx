@@ -153,31 +153,15 @@ export function Header() {
                   >
                     Settings
                   </Link>
-                  <button
-                    className="px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors text-left"
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    Log out
-                  </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/login"
-                    className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
                   <Link
                     href="/register"
                     className="mx-4 my-2 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors text-center"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Sign up
+                    Get Started
                   </Link>
                 </>
               )}

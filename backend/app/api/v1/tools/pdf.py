@@ -1275,6 +1275,10 @@ async def download_pdf(filename: str):
     # Determine media type
     if filename.endswith(".docx"):
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif filename.endswith(".pptx"):
+        media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    elif filename.endswith(".xlsx"):
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     elif filename.endswith(".jpg") or filename.endswith(".jpeg"):
         media_type = "image/jpeg"
     elif filename.endswith(".png"):
@@ -1287,3 +1291,113 @@ async def download_pdf(filename: str):
         media_type=media_type,
         filename=filename,
     )
+@router.post("/to-excel")
+@limiter.limit(PDF_RATE_LIMIT)
+async def pdf_to_excel(
+    request: Request,
+    file: UploadFile = File(...),
+    session: DbSession = None,
+    user: OptionalUser = None,
+    client_ip: ClientIP = None,
+    user_agent: UserAgent = None,
+):
+    """Convert PDF to Excel spreadsheet."""
+    start_time = time.time()
+    content = await file.read()
+
+    if len(content) > settings.max_file_size_bytes:
+        raise BadRequestError(message=f"File too large. Maximum size is {settings.max_file_size_mb}MB")
+
+    is_valid, message = validate_pdf_file(content)
+    if not is_valid:
+        raise BadRequestError(message=f"Invalid file type. {message}")
+
+    usage_service = UsageService(session)
+    history, tier = await usage_service.check_and_record_usage(
+        tool=ToolType.PDF,
+        operation="to_excel",
+        user=user,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        input_metadata={"file_size": len(content)},
+    )
+
+    pdf_service = PDFService()
+    excel_bytes, total_pages = await pdf_service.to_excel(content)
+
+    file_id = str(uuid.uuid4())
+    filename = f"{file_id}.xlsx"
+    filepath = os.path.join(TEMP_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(excel_bytes)
+
+    await usage_service.complete_usage(
+        history=history,
+        processing_time_ms=int((time.time() - start_time) * 1000),
+        output_metadata={"total_pages": total_pages, "output_size": len(excel_bytes)},
+    )
+
+    return {
+        "operation": "to_excel",
+        "original_pages": total_pages,
+        "filename": "converted.xlsx",
+        "size": len(excel_bytes),
+        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+    }
+
+
+@router.post("/to-powerpoint")
+@limiter.limit(PDF_RATE_LIMIT)
+async def pdf_to_powerpoint(
+    request: Request,
+    file: UploadFile = File(...),
+    session: DbSession = None,
+    user: OptionalUser = None,
+    client_ip: ClientIP = None,
+    user_agent: UserAgent = None,
+):
+    """Convert PDF to PowerPoint presentation."""
+    start_time = time.time()
+    content = await file.read()
+
+    if len(content) > settings.max_file_size_bytes:
+        raise BadRequestError(message=f"File too large. Maximum size is {settings.max_file_size_mb}MB")
+
+    is_valid, message = validate_pdf_file(content)
+    if not is_valid:
+        raise BadRequestError(message=f"Invalid file type. {message}")
+
+    usage_service = UsageService(session)
+    history, tier = await usage_service.check_and_record_usage(
+        tool=ToolType.PDF,
+        operation="to_powerpoint",
+        user=user,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        input_metadata={"file_size": len(content)},
+    )
+
+    pdf_service = PDFService()
+    pptx_bytes, total_pages = await pdf_service.to_powerpoint(content)
+
+    file_id = str(uuid.uuid4())
+    filename = f"{file_id}.pptx"
+    filepath = os.path.join(TEMP_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(pptx_bytes)
+
+    await usage_service.complete_usage(
+        history=history,
+        processing_time_ms=int((time.time() - start_time) * 1000),
+        output_metadata={"total_pages": total_pages, "output_size": len(pptx_bytes)},
+    )
+
+    return {
+        "operation": "to_powerpoint",
+        "original_pages": total_pages,
+        "filename": "converted.pptx",
+        "size": len(pptx_bytes),
+        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+    }
