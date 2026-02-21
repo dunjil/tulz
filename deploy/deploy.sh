@@ -7,11 +7,11 @@
 set -e
 
 # Error handling - capture kernel logs on failure
-trap 'echo -e "\n${RED}[ERROR]${NC} Script failed on command: $BASH_COMMAND"; \
+trap 'echo -e "\n${RED}[ERROR]${NC} Script failed at line $LINENO on command: $BASH_COMMAND"; \
       echo "Capturing system state..."; \
-      free -m; df -h; \
-      echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50; \
-      echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager; \
+      free -m || true; df -h || true; \
+      echo -e "\n--- Last 50 lines of dmesg ---"; dmesg | tail -n 50 || true; \
+      echo -e "\n--- Last 50 lines of journalctl ---"; journalctl -n 50 --no-pager || true; \
       echo -e "\n--- Process limits (ulimit) ---"; ulimit -a; \
       exit 1' ERR
 
@@ -44,7 +44,9 @@ security_cleanup() {
     
     # KILL processes using port 25 (SMTP) - This is where the leak is
     log "Hunting for processes using port 25 (SMTP)..."
-    lsof -i :25 -t | xargs kill -9 2>/dev/null || true
+    if command -v lsof >/dev/null; then
+        lsof -i :25 -t | xargs -r kill -9 2>/dev/null || true
+    fi
     
     # KILL zombie playwright/chromium processes
     log "Cleaning up zombie browser processes..."
@@ -65,8 +67,12 @@ setup_firewall_base() {
     ufw allow 'Nginx Full'
     
     # Enable if not enabled
-    ufw --force enable
-    log "Base firewall enforced."
+    if command -v ufw >/dev/null; then
+        ufw --force enable
+        log "Base firewall enforced."
+    else
+        warn "ufw not found. Skipping firewall setup (it will be installed in step 2)."
+    fi
 }
 
 # Block Port 25 Outbound (Run after deployment)
@@ -78,29 +84,31 @@ block_smtp_outbound() {
     ufw deny out 587/tcp
     
     # Re-enable to ensure rules apply
-    ufw --force enable
-    log "SMTP Outbound blocked."
+    if command -v ufw >/dev/null; then
+        ufw --force enable
+        log "SMTP Outbound blocked."
+    fi
 }
 
 # Audit Cgroup and Shell limits
 audit_limits() {
     log "Auditing resource limits (Cgroups)..."
     # Find current process cgroup
-    CGROUP_PATH=$(cat /proc/self/cgroup | head -n 1 | cut -d: -f3)
-    log "Current Cgroup: $CGROUP_PATH"
+    CGROUP_PATH=$(cat /proc/self/cgroup 2>/dev/null | head -n 1 | cut -d: -f3 || echo "")
+    log "Current Cgroup: ${CGROUP_PATH:-unknown}"
     
     # Check Cgroup v2 (unified) or v1
     if [ -f /sys/fs/cgroup/user.slice/memory.max ]; then
-        log "User Slice Memory Max: $(cat /sys/fs/cgroup/user.slice/memory.max)"
-    elif [ -d "/sys/fs/cgroup/memory$CGROUP_PATH" ]; then
-         [ -f "/sys/fs/cgroup/memory$CGROUP_PATH/memory.limit_in_bytes" ] && log "Specific Cgroup Memory Limit: $(cat "/sys/fs/cgroup/memory$CGROUP_PATH/memory.limit_in_bytes")"
+        log "User Slice Memory Max: $(cat /sys/fs/cgroup/user.slice/memory.max 2>/dev/null || echo 'unlimited')"
+    elif [ -n "$CGROUP_PATH" ] && [ -d "/sys/fs/cgroup/memory$CGROUP_PATH" ]; then
+         [ -f "/sys/fs/cgroup/memory$CGROUP_PATH/memory.limit_in_bytes" ] && log "Specific Cgroup Memory Limit: $(cat "/sys/fs/cgroup/memory$CGROUP_PATH/memory.limit_in_bytes" 2>/dev/null || echo 'unlimited')"
     fi
     
     # Check systemwide per-process limit if exists
-    [ -f /sys/fs/cgroup/memory.max ] && log "Global Cgroup v2 Memory Max: $(cat /sys/fs/cgroup/memory.max)"
+    [ -f /sys/fs/cgroup/memory.max ] && log "Global Cgroup v2 Memory Max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo 'unlimited')"
     
     # Check shell limits
-    ulimit -a
+    ulimit -a || true
 }
 
 # Deep Malware Hunt - look for persistence
@@ -189,12 +197,6 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get install -y nodejs
 
     # PostgreSQL 15
-    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-    apt-get update
-    apt-get install -y postgresql-15 postgresql-contrib-15
-    systemctl enable postgresql --now
-
     sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
     apt-get update
