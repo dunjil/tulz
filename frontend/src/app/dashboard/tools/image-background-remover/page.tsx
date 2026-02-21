@@ -38,7 +38,7 @@ export default function ImageCompressPage() {
     const [preview, setPreview] = useState<string | null>(null);
     const [result, setResult] = useState<ImageResponse | null>(null);
     const [quality, setQuality] = useState(85);
-    const [remove_backgroundFormat, setCompressFormat] = useState<"jpeg" | "webp">("jpeg");
+    const [outputFormat, setOutputFormat] = useState<"jpeg" | "webp" | "png">("png");
 
     const handleFileSelect = (files: File[]) => {
         if (files.length > 0) {
@@ -66,12 +66,12 @@ export default function ImageCompressPage() {
         onError: (error: any) => {
             hideProgress();
             if (shouldShowErrorToast(error)) {
-                toast.error(error.response?.data?.message || "Compression failed");
+                toast.error(error.response?.data?.message || "Background removal failed");
             }
         },
     });
 
-    const handleCompress = () => {
+    const handleProcess = () => {
         if (!selectedFile) {
             toast.error("Please select an image first");
             return;
@@ -82,7 +82,7 @@ export default function ImageCompressPage() {
         const formData = new FormData();
         formData.append("file", selectedFile);
         formData.append("operation", "remove_background");
-        formData.append("output_format", remove_backgroundFormat);
+        formData.append("output_format", outputFormat);
         formData.append("quality", quality.toString());
 
         setTimeout(() => setStatus("processing", "Removing background..."), 500);
@@ -99,7 +99,7 @@ export default function ImageCompressPage() {
                             Background Remover
                         </h1>
                         <p className="text-muted-foreground mt-2">
-                            Reduce image file size while maintaining quality
+                            Remove backgrounds from any image automatically
                         </p>
                     </div>
                     <UsageBadge />
@@ -133,7 +133,7 @@ export default function ImageCompressPage() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Background Removal</CardTitle>
+                            <CardTitle>Settings</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
@@ -153,21 +153,22 @@ export default function ImageCompressPage() {
                             <div className="space-y-2">
                                 <Label>Output Format</Label>
                                 <Select
-                                    value={remove_backgroundFormat}
-                                    onValueChange={(v: "jpeg" | "webp") => setCompressFormat(v)}
+                                    value={outputFormat}
+                                    onValueChange={(v: "jpeg" | "webp" | "png") => setOutputFormat(v)}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="png">PNG (Transparent)</SelectItem>
                                         <SelectItem value="jpeg">JPEG</SelectItem>
-                                        <SelectItem value="webp">WebP (Best remove_backgroundion)</SelectItem>
+                                        <SelectItem value="webp">WebP</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <Button
                                 className="w-full"
-                                onClick={handleCompress}
+                                onClick={handleProcess}
                                 isLoading={processMutation.isPending}
                                 disabled={!selectedFile}
                             >

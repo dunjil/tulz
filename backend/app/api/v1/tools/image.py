@@ -1,10 +1,13 @@
 """Image processing endpoints."""
 
+import io
 import os
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+from PIL import Image
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse

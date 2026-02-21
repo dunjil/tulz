@@ -61,6 +61,7 @@ import {
   Droplets,
   Maximize,
   Minimize,
+  ArrowLeft,
 } from "lucide-react";
 
 // Use relative URL in production (requests go through same domain via nginx proxy)
@@ -611,7 +612,9 @@ export default function PDFFillerPage() {
   // Fit PDF to container width using CSS zoom (no re-render)
   const handleFitToWidth = useCallback(() => {
     if (!containerRef.current || canvasSize.width === 0) return;
-    const containerWidth = containerRef.current.clientWidth - 32; // Account for padding
+    const isMobile = window.innerWidth < 768;
+    const padding = isMobile ? 8 : 32;
+    const containerWidth = containerRef.current.clientWidth - padding;
     const newZoom = containerWidth / canvasSize.width;
     setZoom(Math.max(0.3, Math.min(2, newZoom)));
   }, [canvasSize.width]);
@@ -2633,15 +2636,16 @@ export default function PDFFillerPage() {
     <button
       onClick={() => setActiveTool(tool)}
       className={cn(
-        "flex flex-col items-center justify-center p-2 rounded-lg transition-all",
+        "flex flex-col items-center justify-center p-1.5 sm:p-2.5 rounded-lg transition-all",
+        "min-w-[44px] sm:min-w-[64px]",
         activeTool === tool
           ? "bg-primary text-primary-foreground shadow-md"
           : "hover:bg-muted text-muted-foreground hover:text-foreground"
       )}
       title={label}
     >
-      <Icon className="h-5 w-5" />
-      <span className="text-[10px] mt-1">{label}</span>
+      <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+      <span className="text-[8px] sm:text-[10px] mt-0.5 font-medium">{label}</span>
     </button>
   );
 
@@ -2671,12 +2675,59 @@ export default function PDFFillerPage() {
       "flex flex-col",
       isFullscreen
         ? "fixed inset-0 z-[100] bg-background h-screen w-screen"
-        : "h-[calc(100vh-4rem)]"
+        : pdfDoc
+          ? "fixed inset-0 z-[60] bg-background md:static md:h-[calc(100vh-4rem)] md:z-0"
+          : "h-[calc(100vh-4rem)]"
     )}>
-      {/* Header - hide in fullscreen */}
+      {/* Header - Compact for mobile, normal for desktop */}
       {!isFullscreen && (
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-background">
-          <div className="flex items-center gap-3">
+        <div className={cn(
+          "flex items-center justify-between px-2 sm:px-4 py-2 sm:py-3 border-b bg-background",
+          pdfDoc && "h-11 sm:h-16"
+        )}>
+          {/* Mobile Back Button - only show when fixed editor is active */}
+          {pdfDoc && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden mr-1 h-8 w-8"
+              onClick={() => {
+                setSelectedFile(null);
+                setPdfDoc(null);
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+
+          {/* Mobile Page Indicator/Nav - Compact */}
+          {pdfDoc && (
+            <div className="flex md:hidden items-center bg-muted/50 rounded-lg px-2 py-1 gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage <= 1 || pageRendering}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-[10px] font-bold min-w-[2.5rem] text-center">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage >= totalPages || pageRendering}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          <div className={cn("flex items-center gap-3", pdfDoc && "hidden md:flex")}>
             <FileText className="h-6 w-6 text-primary" />
             <div>
               <h1 className="text-lg font-semibold">PDF Filler</h1>
@@ -2686,16 +2737,42 @@ export default function PDFFillerPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <UsageBadge />
+            <UsageBadge className={cn(pdfDoc && "hidden sm:flex")} />
             {pdfDoc && (
-              <Button
-                onClick={() => fillMutation.mutate()}
-                isLoading={fillMutation.isPending}
-                disabled={annotations.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Save PDF
-              </Button>
+              <div className="flex items-center gap-1">
+                {/* Undo/Redo - Mobile compact */}
+                <div className="flex items-center gap-0.5 md:hidden mr-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleUndo}
+                    disabled={historyIndex <= 0}
+                  >
+                    <Undo2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleRedo}
+                    disabled={historyIndex >= history.length - 1}
+                  >
+                    <Redo2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={() => fillMutation.mutate()}
+                  isLoading={fillMutation.isPending}
+                  disabled={annotations.length === 0}
+                  className="h-8 sm:h-10 px-3 sm:px-4"
+                >
+                  <Download className="h-4 w-4 mr-1.5 sm:mr-2" />
+                  <span className="text-xs sm:text-sm">Save</span>
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -2804,10 +2881,10 @@ export default function PDFFillerPage() {
         </div>
       ) : (
         /* Editor Section */
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Mobile Toolbar - Horizontal scrollable on mobile */}
-          <div className="md:hidden border-b bg-muted/30 overflow-x-auto">
-            <div className="flex p-2 gap-1 min-w-max">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+          {/* Mobile Toolbar - Re-positioned to BOTTOM for better reach and space */}
+          <div className="md:hidden order-last border-t bg-background shadow-[0_-2px-10px_rgba(0,0,0,0.05)] overflow-x-auto z-50">
+            <div className="flex p-1 gap-0.5 min-w-max">
               <ToolButton tool="select" icon={MousePointer} label="Select" />
               <ToolButton tool="text" icon={Type} label="Text" />
               <ToolButton tool="draw" icon={Pencil} label="Draw" />
@@ -2827,47 +2904,6 @@ export default function PDFFillerPage() {
               <ToolButton tool="strikethrough" icon={Minus} label="Strike" />
               <ToolButton tool="image" icon={ImageIcon} label="Image" />
               <ToolButton tool="eraser" icon={Eraser} label="Eraser" />
-
-              <div className="border-l mx-1" />
-
-              {/* Action buttons */}
-              <button
-                onClick={handleUndo}
-                disabled={historyIndex <= 0}
-                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed min-w-[52px]"
-                title="Undo"
-              >
-                <Undo2 className="h-5 w-5" />
-                <span className="text-[10px] mt-1">Undo</span>
-              </button>
-              <button
-                onClick={handleRedo}
-                disabled={historyIndex >= history.length - 1}
-                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed min-w-[52px]"
-                title="Redo"
-              >
-                <Redo2 className="h-5 w-5" />
-                <span className="text-[10px] mt-1">Redo</span>
-              </button>
-              <button
-                onClick={handleRevert}
-                disabled={annotations.length === 0}
-                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed min-w-[52px]"
-                title="Revert"
-              >
-                <RotateCcw className="h-5 w-5" />
-                <span className="text-[10px] mt-1">Revert</span>
-              </button>
-              {selectedAnnotation && (
-                <button
-                  onClick={handleDelete}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-destructive/10 text-destructive min-w-[52px]"
-                  title="Delete"
-                >
-                  <Trash2 className="h-5 w-5" />
-                  <span className="text-[10px] mt-1">Delete</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -2893,14 +2929,14 @@ export default function PDFFillerPage() {
             <ToolButton tool="image" icon={ImageIcon} label="Image" />
             <ToolButton tool="eraser" icon={Eraser} label="Eraser" />
 
-            <div className="border-t my-2" />
+            <div className="border-t my-1" />
 
-            {/* Action buttons */}
+            {/* Desktop-only action buttons */}
             <button
               onClick={handleUndo}
               disabled={historyIndex <= 0}
               className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Undo (Ctrl+Z)"
+              title="Undo"
             >
               <Undo2 className="h-5 w-5" />
               <span className="text-[10px] mt-1">Undo</span>
@@ -2909,7 +2945,7 @@ export default function PDFFillerPage() {
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
               className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Redo (Ctrl+Y)"
+              title="Redo"
             >
               <Redo2 className="h-5 w-5" />
               <span className="text-[10px] mt-1">Redo</span>
@@ -2918,7 +2954,7 @@ export default function PDFFillerPage() {
               onClick={handleRevert}
               disabled={annotations.length === 0}
               className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Revert All Changes"
+              title="Revert"
             >
               <RotateCcw className="h-5 w-5" />
               <span className="text-[10px] mt-1">Revert</span>
@@ -2938,7 +2974,34 @@ export default function PDFFillerPage() {
           {/* Canvas Area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Tool Settings Bar */}
-            <div className="flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-2 border-b bg-background flex-nowrap md:flex-wrap overflow-x-auto whitespace-nowrap">
+            <div className={cn(
+              "flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-1 border-b bg-background flex-nowrap overflow-x-auto whitespace-nowrap min-h-[40px] sm:min-h-[48px]",
+              !selectedAnnotation && activeTool === "select" && "hidden md:flex"
+            )}>
+              {/* Mobile Only: Revert & Delete actions integrated here to save space */}
+              <div className="flex md:hidden items-center gap-1 mr-2 border-r pr-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleRevert}
+                  disabled={annotations.length === 0}
+                  title="Revert all changes"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                {selectedAnnotation && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    onClick={handleDelete}
+                    title="Delete selected"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               {(activeTool === "draw" ||
                 activeTool === "text" ||
                 activeTool === "rectangle" ||
@@ -3237,21 +3300,21 @@ export default function PDFFillerPage() {
               )}
 
               {/* Zoom controls - CSS transform only, no re-renders */}
-              <div className="ml-auto flex items-center gap-1 sm:gap-2">
+              <div className="ml-auto flex items-center gap-0.5 sm:gap-2">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}
                   disabled={zoom <= 0.3}
-                  className="px-2"
+                  className="px-1.5 sm:px-2 h-7 sm:h-9"
                 >
-                  <ZoomOut className="h-4 w-4" />
+                  <ZoomOut className="h-3.5 w-3.5 sm:h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={handleFitToWidth}
-                  className="px-2 text-xs"
+                  className="px-1.5 sm:px-2 h-7 sm:h-9 text-[10px] sm:text-xs"
                   title="Fit to width"
                 >
                   Fit
@@ -3260,7 +3323,7 @@ export default function PDFFillerPage() {
                   size="sm"
                   variant={zoom === 1.0 ? "secondary" : "ghost"}
                   onClick={handleResetZoom}
-                  className="px-2 text-xs min-w-[3rem]"
+                  className="px-1 sm:px-2 h-7 sm:h-9 text-[10px] sm:text-xs min-w-[2.5rem] sm:min-w-[3rem]"
                   title="Reset to 100%"
                 >
                   {Math.round(zoom * 100)}%
@@ -3270,22 +3333,22 @@ export default function PDFFillerPage() {
                   variant="ghost"
                   onClick={() => setZoom(Math.min(2, zoom + 0.1))}
                   disabled={zoom >= 2}
-                  className="px-2"
+                  className="px-1.5 sm:px-2 h-7 sm:h-9"
                 >
-                  <ZoomIn className="h-4 w-4" />
+                  <ZoomIn className="h-3.5 w-3.5 sm:h-4 w-4" />
                 </Button>
-                <div className="w-px h-4 bg-border mx-1" />
+                <div className="w-px h-3 sm:h-4 bg-border mx-0.5 sm:mx-1" />
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={toggleFullscreen}
-                  className="px-2"
+                  className="px-1.5 sm:px-2 h-7 sm:h-9"
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
                   {isFullscreen ? (
-                    <Minimize className="h-4 w-4" />
+                    <Minimize className="h-3.5 w-3.5 sm:h-4 w-4" />
                   ) : (
-                    <Maximize className="h-4 w-4" />
+                    <Maximize className="h-3.5 w-3.5 sm:h-4 w-4" />
                   )}
                 </Button>
               </div>
@@ -3294,9 +3357,8 @@ export default function PDFFillerPage() {
             {/* Canvas Container - scrollable for pan, CSS transform for zoom (no re-renders) */}
             <div
               ref={containerRef}
-              className="flex-1 overflow-auto bg-muted/50 p-2 sm:p-4"
+              className="flex-1 overflow-auto bg-muted/50 p-0 sm:p-4"
             >
-              {/* Wrapper div with scaled dimensions to enable proper scrolling */}
               <div
                 style={{
                   width: canvasSize.width * zoom,
@@ -3309,7 +3371,6 @@ export default function PDFFillerPage() {
                   style={{
                     width: canvasSize.width,
                     height: canvasSize.height,
-                    // CSS transform for zoom - doesn't re-render the PDF
                     transform: `scale(${zoom})`,
                     transformOrigin: 'top left',
                   }}
@@ -3320,14 +3381,12 @@ export default function PDFFillerPage() {
                     </div>
                   )}
 
-                  {/* PDF Canvas (background) */}
                   <canvas
                     ref={pdfCanvasRef}
                     className="absolute inset-0 bg-white"
                     style={{ width: "100%", height: "100%" }}
                   />
 
-                  {/* Annotation Canvas (foreground) */}
                   <canvas
                     ref={annotationCanvasRef}
                     className="absolute inset-0"
@@ -3351,7 +3410,6 @@ export default function PDFFillerPage() {
                     onTouchEnd={handleMouseUp}
                   />
 
-                  {/* Text input overlay */}
                   {editingText && (
                     <textarea
                       ref={textInputRef}
@@ -3378,18 +3436,18 @@ export default function PDFFillerPage() {
               </div>
             </div>
 
-            {/* Page Navigation */}
-            <div className="flex items-center justify-center gap-2 sm:gap-4 px-2 sm:px-4 py-2 sm:py-3 border-t bg-background">
+            {/* Page Navigation - Desktop Only */}
+            <div className="hidden md:flex items-center justify-center gap-4 px-4 py-3 border-t bg-background">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage <= 1 || pageRendering}
-                className="px-2 sm:px-3"
+                className="px-3"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
+              <span className="text-sm font-medium whitespace-nowrap">
                 {currentPage} / {totalPages}
               </span>
               <Button
@@ -3399,7 +3457,7 @@ export default function PDFFillerPage() {
                   setCurrentPage(Math.min(totalPages, currentPage + 1))
                 }
                 disabled={currentPage >= totalPages || pageRendering}
-                className="px-2 sm:px-3"
+                className="px-3"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -3410,7 +3468,7 @@ export default function PDFFillerPage() {
           {result && (
             <>
               {/* Mobile: Floating download button */}
-              <div className="md:hidden fixed bottom-4 right-4 z-50">
+              <div className="md:hidden fixed bottom-4 right-4 z-[70]">
                 <Button onClick={handleDownload} size="lg" className="shadow-lg">
                   <Download className="h-5 w-5 mr-2" />
                   Download PDF
@@ -3439,7 +3497,7 @@ export default function PDFFillerPage() {
 
       {/* Signature Modal */}
       {showSignatureModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
           <Card className="w-full max-w-[480px]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Add Your Signature</CardTitle>
@@ -3565,7 +3623,7 @@ export default function PDFFillerPage() {
 
       {/* Date Modal */}
       {showDateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]">
           <Card className="w-[400px]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Insert Date</CardTitle>
@@ -3622,7 +3680,7 @@ export default function PDFFillerPage() {
 
       {/* Initials Modal */}
       {showInitialsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
           <Card className="w-full max-w-[320px]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Draw Your Initials</CardTitle>
@@ -3678,7 +3736,7 @@ export default function PDFFillerPage() {
 
       {/* Signed Stamp Modal */}
       {showSignedStampModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <Card className="w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border-0">
             <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b">
               <div className="flex items-center justify-between">
@@ -3995,7 +4053,7 @@ export default function PDFFillerPage() {
 
       {/* Watermark Modal */}
       {showWatermarkModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <Card className="w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border-0">
             <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b">
               <div className="flex items-center justify-between">

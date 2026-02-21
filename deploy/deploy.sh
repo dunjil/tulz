@@ -48,6 +48,8 @@ malware_purge() {
     # 2. Kill any processes matching known malware signatures
     pkill -9 -f "kok" || true
     pkill -9 -f "x86_64" || true
+    pkill -9 -f "dnsmasq" || true
+    pkill -9 -f "logic.sh" || true
     
     # 3. Clean /tmp, /var/tmp and /dev/shm of suspicious files and hidden Unix folders
     log "Purging malicious files and hidden Unix folders..."

@@ -68,6 +68,7 @@ class ImageService:
             # Perform operation
             if request.operation == ImageOperation.REMOVE_BACKGROUND:
                 img = await self._remove_background(image_bytes)
+            
             # Apply crop if parameters are provided (allows Crop + Resize/Filter etc.)
             if all([
                 request.crop_x is not None,
@@ -77,9 +78,9 @@ class ImageService:
             ]):
                 img = self._crop(img, request)
 
-            # Perform operation
+            # Rest of operations
             if request.operation == ImageOperation.REMOVE_BACKGROUND:
-                img = await self._remove_background(image_bytes)
+                pass # Already handled
             elif request.operation == ImageOperation.CROP:
                 pass  # Already handled above
             elif request.operation == ImageOperation.RESIZE:

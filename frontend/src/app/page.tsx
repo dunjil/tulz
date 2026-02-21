@@ -48,7 +48,9 @@ import {
   Eraser,
   Target,
   ImageMinus,
+  Search,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const tools = [
   {
@@ -573,14 +575,19 @@ const faqs = [
 
 export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Get unique categories
   const categories = ["All", ...Array.from(new Set(tools.map((tool) => tool.category)))];
 
-  // Filter tools based on selected category
-  const filteredTools = selectedCategory === "All"
-    ? tools
-    : tools.filter((tool) => tool.category === selectedCategory);
+  // Filter tools based on selected category and search query
+  const filteredTools = tools.filter((tool) => {
+    const matchesCategory = selectedCategory === "All" || tool.category === selectedCategory;
+    const matchesSearch =
+      tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tool.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950">
@@ -640,6 +647,32 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Search Bar - Repositioned for prominence */}
+        <section className="py-8 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="container mx-auto max-w-2xl px-4">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-red-500">
+                <Search className="h-5 w-5 text-slate-400 group-focus-within:text-red-500 transition-colors" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Search tools (e.g. PDF, Image, QR...)"
+                className="pl-11 pr-4 py-6 text-lg rounded-2xl border-slate-200 dark:border-slate-700 focus:border-red-500 focus:ring-red-500/20 dark:bg-slate-800 dark:text-white transition-all shadow-sm hover:shadow-md h-14"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <span className="text-xl">×</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
 
 
 
@@ -675,44 +708,62 @@ export default function HomePage() {
 
             {/* Tools Grid with Material Design elevation */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTools.map((tool) => (
-                <Link
-                  key={tool.name}
-                  href={tool.href}
-                  className="group relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-500 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
-                >
-                  {/* Card content with increased padding for height */}
-                  <div className="p-6 flex flex-col gap-4 min-h-[140px]">
-                    {/* Icon and Title Row */}
-                    <div className="flex items-center gap-3">
-                      {/* Icon with Material Design elevation */}
-                      <div className={`flex-shrink-0 p-3 rounded-xl bg-gradient-to-br ${tool.gradient} text-white shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300`}>
-                        <tool.icon className="h-6 w-6" strokeWidth={2} />
+              {filteredTools.length > 0 ? (
+                filteredTools.map((tool) => (
+                  <Link
+                    key={tool.name}
+                    href={tool.href}
+                    className="group relative bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-red-400 dark:hover:border-red-500 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+                  >
+                    {/* Card content with increased padding for height */}
+                    <div className="p-6 flex flex-col gap-4 min-h-[140px]">
+                      {/* Icon and Title Row */}
+                      <div className="flex items-center gap-3">
+                        {/* Icon with Material Design elevation */}
+                        <div className={`flex-shrink-0 p-3 rounded-xl bg-gradient-to-br ${tool.gradient} text-white shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300`}>
+                          <tool.icon className="h-6 w-6" strokeWidth={2} />
+                        </div>
+
+                        {/* Title and Badge */}
+                        <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                          <h3 className="font-semibold text-base text-slate-900 dark:text-white leading-snug">
+                            {tool.name}
+                          </h3>
+                          {tool.free && (
+                            <span className="flex-shrink-0 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              FREE
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Title and Badge */}
-                      <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
-                        <h3 className="font-semibold text-base text-slate-900 dark:text-white leading-snug">
-                          {tool.name}
-                        </h3>
-                        {tool.free && (
-                          <span className="flex-shrink-0 px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            FREE
-                          </span>
-                        )}
-                      </div>
+                      {/* Description - Full Width */}
+                      <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                        {tool.description}
+                      </p>
                     </div>
 
-                    {/* Description - Full Width */}
-                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                      {tool.description}
-                    </p>
-                  </div>
-
-                  {/* Material Design ripple effect on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                </Link>
-              ))}
+                    {/* Material Design ripple effect on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  </Link>
+                ))
+              ) : (
+                <div className="col-span-full py-12 text-center">
+                  <p className="text-lg text-slate-600 dark:text-slate-400">
+                    No tools found matching "{searchQuery}"
+                  </p>
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedCategory("All");
+                    }}
+                    className="mt-2 text-red-600 hover:text-red-700"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </section>
