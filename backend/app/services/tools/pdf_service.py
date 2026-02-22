@@ -1429,6 +1429,9 @@ class PDFService:
             if "Sheet" in workbook.sheetnames:
                 workbook.remove(workbook["Sheet"])
             
+            # TRACK TEMP FILES for removal after save
+            temp_files = []
+            
             # Helper to convert fitz color to hex
             def fitz_to_hex(color):
                 if color is None: return None
@@ -1486,7 +1489,6 @@ class PDFService:
                     image_bytes = base_image["image"]
                     
                     # Get image position on page
-                    # Note: get_image_info (v1.18.0+) or page.get_image_rects
                     rects = page.get_image_rects(xref)
                     if rects:
                         rect = rects[0]
@@ -1494,23 +1496,17 @@ class PDFService:
                             tmp.write(image_bytes)
                             tmp_path = tmp.name
                         
-                        try:
-                            img = XLImage(tmp_path)
-                            # Approximate position
-                            # anchor: 'A1' etc.
-                            c_idx = int(rect.x0 / (COL_WIDTH * 5)) + 1
-                            r_idx = int(rect.y0 / ROW_HEIGHT) + 1
-                            
-                            # Scale image to fit the bbox
-                            # Excel Image width/height are in pixels. PDF pts are 1/72.
-                            # 1 pt = 1.333 pixels
-                            img.width = rect.width * 1.333
-                            img.height = rect.height * 1.333
-                            
-                            main_ws.add_image(img, get_column_letter(c_idx) + str(r_idx))
-                        finally:
-                            if os.path.exists(tmp_path):
-                                os.remove(tmp_path)
+                        img = XLImage(tmp_path)
+                        # Approximate position
+                        c_idx = int(rect.x0 / (COL_WIDTH * 5)) + 1
+                        r_idx = int(rect.y0 / ROW_HEIGHT) + 1
+                        
+                        # Scale image to fit the bbox
+                        img.width = rect.width * 1.333
+                        img.height = rect.height * 1.333
+                        
+                        main_ws.add_image(img, get_column_letter(c_idx) + str(r_idx))
+                        temp_files.append(tmp_path)
 
                 # --- C. TEXT OVERLAYS ---
                 # Re-map text to cells atop icons/colors
@@ -1576,6 +1572,15 @@ class PDFService:
             
             doc.close()
             workbook.save(output)
+            
+            # Clean up temp files ONLY after save
+            for fpath in temp_files:
+                try:
+                    if os.path.exists(fpath):
+                        os.remove(fpath)
+                except:
+                    pass
+
             return output.getvalue(), total_pages
 
         except Exception as e:
