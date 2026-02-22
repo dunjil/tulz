@@ -527,7 +527,7 @@ fi
 # 11. Nginx Config
 step "10/12" "Configuring Nginx..."
 # Robustly get domain from .env (handles "DOMAIN = value", "DOMAIN=value", quotes, etc)
-DOMAIN=$(grep -i "^DOMAIN" "$APP_DIR/backend/.env" | head -n 1 | sed -E 's/^DOMAIN[:space:]*=[:space:]*["'\'']?([^"'\'']+)["'\'']?.*$/\1/I' | xargs 2>/dev/null || echo "tulz.tools")
+DOMAIN=$(grep -i "^DOMAIN" "$APP_DIR/backend/.env" | head -n 1 | sed -E 's/^DOMAIN[[:space:]]*=[[:space:]]*["'\'']?([^"'\'']+)["'\'']?.*$/\1/I' | xargs 2>/dev/null || echo "tulz.tools")
 # Fallback if domain is still empty after grep
 [ -z "$DOMAIN" ] && DOMAIN="tulz.tools"
 PUBLIC_IP=$(curl -s https://ifconfig.me || echo "38.242.208.42")
@@ -591,7 +591,7 @@ fi
 # 11. SSL/HTTPS (Optional)
 # If CERTBOT_EMAIL is set in .env, we try to automate SSL
 # Robustly get CERTBOT_EMAIL from .env
-CERTBOT_EMAIL=$(grep -i "^CERTBOT_EMAIL" "$APP_DIR/backend/.env" | head -n 1 | sed -E 's/^CERTBOT_EMAIL[:space:]*=[:space:]*["'\'']?([^"'\'']+)["'\'']?.*$/\1/I' | xargs 2>/dev/null || echo "")
+CERTBOT_EMAIL=$(grep -i "^CERTBOT_EMAIL" "$APP_DIR/backend/.env" | head -n 1 | sed -E 's/^CERTBOT_EMAIL[[:space:]]*=[[:space:]]*["'\'']?([^"'\'']+)["'\'']?.*$/\1/I' | xargs 2>/dev/null || echo "")
 
 log "Detecting SSL requirements: Domain=$DOMAIN, Email=${CERTBOT_EMAIL:-NOT_SET}"
 
