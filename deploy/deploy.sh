@@ -256,7 +256,7 @@ ensure_python_tools() {
     log "Ensuring critical Python tools (pip, distutils) are installed..."
     # On current Ubuntu, python3-pip and python3-venv are essential
     apt-get update -qq
-    apt-get install -y python3-pip python3-venv python3-distutils || warn "Failed to install some python tools"
+    apt-get install -y python3-pip python3-venv python3-setuptools || warn "Failed to install some python tools"
 }
 
 ensure_python_tools
@@ -307,6 +307,18 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
     mkdir -p "$STAGING_DIR"
     
     tar -xzf /tmp/toolhub-code.tar.gz -C "$STAGING_DIR"
+    
+    # Ensure structure exists even if tarball is flat or nested
+    # Check for nesting (e.g. if code is inside a ToolHub/ or similar folder in tarball)
+    TOP_DIR=$(ls -1 "$STAGING_DIR" | head -n 1)
+    if [ ! -d "$STAGING_DIR/backend" ] && [ -d "$STAGING_DIR/$TOP_DIR/backend" ]; then
+        log "Detected nested project structure ($TOP_DIR) in tarball. Flattening..."
+        mv "$STAGING_DIR/$TOP_DIR/"* "$STAGING_DIR/"
+        rm -rf "$STAGING_DIR/$TOP_DIR"
+    fi
+
+    # Explicitly ensure target directories exist for config seeding
+    mkdir -p "$STAGING_DIR/backend" "$STAGING_DIR/frontend"
     
     # Sync existing configuration and environment
     log "Seeding staging from production..."
