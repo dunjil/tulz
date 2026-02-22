@@ -309,12 +309,13 @@ if [ -f /tmp/toolhub-code.tar.gz ]; then
     tar -xzf /tmp/toolhub-code.tar.gz -C "$STAGING_DIR"
     
     # Ensure structure exists even if tarball is flat or nested
-    # Check for nesting (e.g. if code is inside a ToolHub/ or similar folder in tarball)
-    TOP_DIR=$(ls -1 "$STAGING_DIR" | head -n 1)
-    if [ ! -d "$STAGING_DIR/backend" ] && [ -d "$STAGING_DIR/$TOP_DIR/backend" ]; then
-        log "Detected nested project structure ($TOP_DIR) in tarball. Flattening..."
-        mv "$STAGING_DIR/$TOP_DIR/"* "$STAGING_DIR/"
-        rm -rf "$STAGING_DIR/$TOP_DIR"
+    # More robust check for nesting: look for the directory containing 'backend'
+    if [ ! -d "$STAGING_DIR/backend" ]; then
+        NESTED_ROOT=$(find "$STAGING_DIR" -maxdepth 2 -name "backend" -type d -printf '%h\n' | head -n 1)
+        if [ -n "$NESTED_ROOT" ] && [ "$NESTED_ROOT" != "$STAGING_DIR" ]; then
+            log "Detected nested project structure at $NESTED_ROOT in tarball. Flattening..."
+            mv "$NESTED_ROOT"/* "$STAGING_DIR/" 2>/dev/null || true
+        fi
     fi
 
     # Explicitly ensure target directories exist for config seeding
@@ -631,7 +632,24 @@ fi
 # 12. Setup Periodic Cleanup
 step "12/12" "Scheduling periodic health maintenance..."
 CLEANUP_SCRIPT="$APP_DIR/deploy/cleanup_zombies.sh"
-cp "$STAGING_DIR/deploy/cleanup_zombies.sh" "$CLEANUP_SCRIPT"
+
+# Robust copy with fallback to ensure deployment doesn't fail here
+if [ -f "$STAGING_DIR/deploy/cleanup_zombies.sh" ]; then
+    cp "$STAGING_DIR/deploy/cleanup_zombies.sh" "$CLEANUP_SCRIPT"
+elif [ -f "$APP_DIR/deploy/cleanup_zombies.sh" ]; then
+    log "cleanup_zombies.sh missing in staging, preserving existing production version."
+elif [ -f "$(dirname "$0")/cleanup_zombies.sh" ]; then
+    cp "$(dirname "$0")/cleanup_zombies.sh" "$CLEANUP_SCRIPT"
+    log "cleanup_zombies.sh restored from deployment source directory."
+else
+    warn "cleanup_zombies.sh not found in staging or prod. Creating minimal script..."
+    cat > "$CLEANUP_SCRIPT" <<EOF
+#!/bin/bash
+# Minimal fallback zombie reaper
+pkill -9 -o chrome 2>/dev/null || true
+pkill -9 -o chromium 2>/dev/null || true
+EOF
+fi
 chmod +x "$CLEANUP_SCRIPT"
 chown $APP_USER:$APP_USER "$CLEANUP_SCRIPT"
 
