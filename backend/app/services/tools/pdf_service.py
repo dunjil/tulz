@@ -1463,17 +1463,29 @@ class PDFService:
                 drawings = page.get_drawings()
                 blocks = page.get_text("dict")["blocks"]
                 
-                # --- A. BACKGROUND SHAPES & COLORS ---
-                # We map drawings (rects/fills) to the grid
+                # --- A. BACKGROUND SHAPES & COLORS (Filtered for Fidelity) ---
+                # We map drawings (rects/fills) to the grid, but ONLY if they are simple background elements.
+                # Signatures/logos are complex paths; mapping their bbox as a solid color creates "black boxes".
                 for draw in drawings:
                     if "fill" in draw and draw["fill"]:
+                        # HEURISTIC: Backgrounds are usually simple rectangles.
+                        # Complex paths (many items) are usually foreground content (signatures/icons).
+                        is_simple_rect = (len(draw["items"]) == 1 and draw["items"][0][0] == "re")
+                        
+                        if not is_simple_rect:
+                            continue # Skip complex vectors to avoid black boxes
+                            
                         rect = draw["rect"]
+                        # Skip very small rects
+                        if rect.width < 5 or rect.height < 5:
+                            continue
+
                         bg_color = fitz_to_hex(draw["fill"])
                         
                         # Map rect to cell range
                         s_row = int(rect.y0 / ROW_HEIGHT) + 1
                         e_row = int(rect.y1 / ROW_HEIGHT) + 1
-                        s_col = int(rect.x0 / (COL_WIDTH * 5)) + 1 # approx scale factor
+                        s_col = int(rect.x0 / (COL_WIDTH * 5)) + 1
                         e_col = int(rect.x1 / (COL_WIDTH * 5)) + 1
                         
                         for r in range(s_row, e_row + 1):
@@ -1481,32 +1493,38 @@ class PDFService:
                                 cell = main_ws.cell(row=r, column=c)
                                 cell.fill = PatternFill(start_color=bg_color, end_color=bg_color, fill_type="solid")
 
-                # --- B. IMAGES ---
-                image_list = page.get_images(full=True)
-                for img_idx, img_info in enumerate(image_list):
-                    xref = img_info[0]
-                    base_image = doc.extract_image(xref)
-                    image_bytes = base_image["image"]
-                    
-                    # Get image position on page
-                    rects = page.get_image_rects(xref)
-                    if rects:
-                        rect = rects[0]
-                        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                            tmp.write(image_bytes)
-                            tmp_path = tmp.name
+                # --- B. IMAGES (Alpha-Aware Extraction) ---
+                # Instead of raw xref extraction, we use get_pixmap on the rect to 
+                # ensure masks and alpha are correctly merged into the output image.
+                img_info_list = page.get_image_info(hashes=True)
+                for img_idx, img_info in enumerate(img_info_list):
+                    rect = fitz.Rect(img_info["bbox"])
+                    if rect.width < 1 or rect.height < 1:
+                        continue
                         
+                    # Use pixmap to render the specific image area (fixes masks/alpha)
+                    pix = page.get_pixmap(clip=rect, matrix=fitz.Matrix(2, 2)) # 2x scale for clarity
+                    image_bytes = pix.tobytes("png")
+                    
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        tmp.write(image_bytes)
+                        tmp_path = tmp.name
+                    
+                    try:
                         img = XLImage(tmp_path)
-                        # Approximate position
+                        # Position in grid
                         c_idx = int(rect.x0 / (COL_WIDTH * 5)) + 1
                         r_idx = int(rect.y0 / ROW_HEIGHT) + 1
                         
-                        # Scale image to fit the bbox
+                        # Scale to fit (MuPDF Matrix(2,2) means 144 DPI, PDF is 72)
                         img.width = rect.width * 1.333
                         img.height = rect.height * 1.333
                         
                         main_ws.add_image(img, get_column_letter(c_idx) + str(r_idx))
                         temp_files.append(tmp_path)
+                    except:
+                        if os.path.exists(tmp_path):
+                            os.remove(tmp_path)
 
                 # --- C. TEXT OVERLAYS ---
                 # Re-map text to cells atop icons/colors
