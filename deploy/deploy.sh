@@ -239,6 +239,13 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get update
     apt-get install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-venv python${PYTHON_VERSION}-dev
 
+    # Install libssl1.1 for Aspose.CAD since Ubuntu 22.04+ dropped it
+    if ! dpkg -l | grep -q libssl1.1; then
+        log "Installing libssl1.1 for Aspose.CAD..."
+        wget -q http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O /tmp/libssl1.1.deb
+        dpkg -i /tmp/libssl1.1.deb || apt-get install -f -y
+    fi
+
     # Node.js
     curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
     apt-get install -y nodejs
@@ -257,6 +264,13 @@ ensure_python_tools() {
     # On current Ubuntu, python3-pip and python3-venv are essential
     apt-get update -qq
     apt-get install -y python3-pip python3-venv python3-setuptools || warn "Failed to install some python tools"
+    
+    # Ensure libssl1.1 is installed for Aspose.CAD on existing installations too
+    if ! dpkg -l | grep -q libssl1.1; then
+        log "Installing libssl1.1 for Aspose.CAD..."
+        wget -q http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O /tmp/libssl1.1.deb
+        dpkg -i /tmp/libssl1.1.deb || apt-get install -f -y
+    fi
 }
 
 ensure_python_tools
@@ -465,7 +479,7 @@ ExecStartPre=/usr/bin/mkdir -p $APP_DIR/backend
 EnvironmentFile=-$APP_DIR/backend/.env
 ExecStart=$APP_DIR/backend/venv/bin/gunicorn app.main:app \
     --workers 1 --worker-class uvicorn.workers.UvicornWorker \
-    --preload --bind 127.0.0.1:8000 --timeout 300
+    --bind 127.0.0.1:8000 --timeout 300
 Restart=always
 RestartSec=5
 # Give the app more time to start/stop before systemd kills it
@@ -475,7 +489,7 @@ TimeoutStopSec=60
 KillMode=mixed
 
 # RESOURCE LIMITS: Prevent crashes and OOM loops
-MemoryMax=2G
+MemoryMax=3.5G
 CPUWeight=50
 IOWeight=50
 
