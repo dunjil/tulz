@@ -248,7 +248,7 @@ if [ "$FIRST_TIME" = true ]; then
         wget -q "https://ftp.gnu.org/gnu/libredwg/$LIBREDWG_FILE"
         tar -xzf "$LIBREDWG_FILE"
         cd "${LIBREDWG_FILE%.tar.gz}"
-        ./configure --disable-shared
+        ./configure --disable-shared --disable-bindings
         make -j$(nproc)
         make install
         ldconfig
@@ -286,7 +286,7 @@ ensure_python_tools() {
         wget -q "https://ftp.gnu.org/gnu/libredwg/$LIBREDWG_FILE"
         tar -xzf "$LIBREDWG_FILE"
         cd "${LIBREDWG_FILE%.tar.gz}"
-        ./configure --disable-shared
+        ./configure --disable-shared --disable-bindings
         make -j$(nproc)
         make install
         ldconfig
