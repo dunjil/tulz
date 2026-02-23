@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "Free Image Editor - Remove Background, Resize, Convert | Tulz",
     description:
       "Edit images online. Remove backgrounds, resize, crop, and convert formats. Free to use.",
-    url: "https://tulz.tools/dashboard/tools/image",
+    url: "https://tulz.tools/tools/image",
   },
 };
 

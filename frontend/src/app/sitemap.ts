@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import { toolsConfig } from "@/config/tools";
+import { guides } from "@/data/guides";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://tulz.tools";
@@ -17,6 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/guides`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/login`,
@@ -52,11 +59,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // All tool pages - dynamically generated from config
   const toolPages = toolsConfig.map((tool) => ({
-    url: `${baseUrl}/dashboard/tools/${tool.slug}`,
+    url: `${baseUrl}/tools/${tool.slug}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.95,
   }));
 
-  return [...staticPages, ...toolPages];
+  // All guide pages - dynamically generated from config
+  const guidePages = guides.map((guide) => ({
+    url: `${baseUrl}/guides/${guide.slug}`,
+    lastModified: new Date(guide.lastUpdated),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  return [...staticPages, ...toolPages, ...guidePages];
 }

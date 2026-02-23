@@ -8,6 +8,7 @@ interface GoogleAdProps {
   format?: "auto" | "horizontal" | "vertical" | "rectangle";
   responsive?: boolean;
   className?: string;
+  bare?: boolean;
 }
 
 export function GoogleAd({
@@ -15,6 +16,7 @@ export function GoogleAd({
   format = "auto",
   responsive = true,
   className = "",
+  bare = false,
 }: GoogleAdProps) {
   // const { user } = useAuth(); // Auth not needed for ads anymore
   // const isPro = false; // user?.subscription_tier === "pro"; 
@@ -44,6 +46,7 @@ export function GoogleAd({
 
   // Don't show ads if AdSense is not configured (development mode)
   if (adsenseClientId === "ca-pub-XXXXXXXXXX") {
+    if (bare) return null; // Don't show dev placeholder for bare/mobile slots
     return (
       <div className={`w-full ${className}`}>
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 sm:p-4">
@@ -57,30 +60,42 @@ export function GoogleAd({
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 sm:p-4">
-        <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 text-center mb-1 hidden sm:block">
-          Advertisement
-        </div>
+      {bare ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block" }}
+          style={{ display: "block", minHeight: 0 }}
           data-ad-client={adsenseClientId}
           data-ad-slot={slot}
           data-ad-format={format}
           data-full-width-responsive={responsive ? "true" : "false"}
         ></ins>
-      </div>
+      ) : (
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1 sm:p-4">
+          <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 text-center mb-1 hidden sm:block">
+            Advertisement
+          </div>
+          <ins
+            className="adsbygoogle"
+            style={{ display: "block" }}
+            data-ad-client={adsenseClientId}
+            data-ad-slot={slot}
+            data-ad-format={format}
+            data-full-width-responsive={responsive ? "true" : "false"}
+          ></ins>
+        </div>
+      )}
     </div>
   );
 }
 
-export function GoogleAdBanner({ className = "" }: { className?: string }) {
+export function GoogleAdBanner({ className = "", bare = false }: { className?: string; bare?: boolean }) {
   return (
     <GoogleAd
       slot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT || "1234567890"}
       format="horizontal"
       responsive={true}
       className={className}
+      bare={bare}
     />
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { JsonTreeView } from "@/components/shared/json-tree-view";
+
 
 import { useState, useEffect, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -58,6 +60,7 @@ export default function JsonFormatterPage() {
   const [convertTo, setConvertTo] = useState("yaml");
   const [liveValidation, setLiveValidation] = useState<{ valid: boolean; error?: string } | null>(null);
   const [lineCount, setLineCount] = useState(1);
+  const [viewMode, setViewMode] = useState<"tree" | "raw">("tree");
 
   // Live validation as user types
   useEffect(() => {
@@ -236,20 +239,57 @@ export default function JsonFormatterPage() {
     e.target.value = "";
   };
 
-  const loadSample = () => {
-    const sample = {
-      name: "John Doe",
-      age: 30,
-      email: "john@example.com",
-      address: {
-        street: "123 Main St",
-        city: "New York",
-        country: "USA",
+  const [sampleOpen, setSampleOpen] = useState(false);
+
+  const SAMPLES = {
+    simple: {
+      label: "Simple – Person",
+      data: {
+        name: "Jane Smith",
+        age: 28,
+        email: "jane@example.com",
+        address: { street: "45 Oak Ave", city: "London", country: "UK" },
+        hobbies: ["reading", "hiking", "photography"],
+        isActive: true,
       },
-      hobbies: ["reading", "gaming", "coding"],
-      isActive: true,
-    };
-    setInput(JSON.stringify(sample));
+    },
+    complex: {
+      label: "Complex – E-commerce API",
+      data: {
+        meta: { status: 200, version: "v2.1", took_ms: 42, total: 2 },
+        orders: [
+          {
+            id: "ORD-88231",
+            created_at: "2024-12-01T10:22:00Z",
+            status: "shipped",
+            customer: { id: "USR-441", name: "Alice Johnson", email: "alice@shop.io", tier: "gold" },
+            items: [
+              { sku: "SHOE-WHT-42", name: "Air Runner", qty: 1, unit_price: 129.99, discount: 0.1 },
+              { sku: "SOCK-BLK-M", name: "Pro Socks (3-pack)", qty: 2, unit_price: 12.0, discount: 0 },
+            ],
+            shipping: { carrier: "DHL", tracking: "JD014600007458", eta: "2024-12-04", address: { line1: "12 Baker St", city: "London", postcode: "W1U 3BW", country: "GB" } },
+            payment: { method: "card", last4: "4242", currency: "GBP", subtotal: 153.99, tax: 30.8, total: 184.79 },
+          },
+          {
+            id: "ORD-88240",
+            created_at: "2024-12-02T14:05:00Z",
+            status: "pending",
+            customer: { id: "USR-812", name: "Bob Chen", email: "bob@shop.io", tier: "silver" },
+            items: [
+              { sku: "BAG-BRN-L", name: "Canvas Tote – Large", qty: 1, unit_price: 45.0, discount: 0 },
+            ],
+            shipping: null,
+            payment: { method: "paypal", currency: "USD", subtotal: 45.0, tax: 4.5, total: 49.5 },
+          },
+        ],
+        pagination: { page: 1, per_page: 20, total_pages: 1 },
+      },
+    },
+  };
+
+  const loadSample = (type: "simple" | "complex") => {
+    setInput(JSON.stringify(SAMPLES[type].data));
+    setSampleOpen(false);
   };
 
   // Keyboard shortcuts
@@ -271,7 +311,7 @@ export default function JsonFormatterPage() {
   const isLoading = formatMutation.isPending || minifyMutation.isPending || validateMutation.isPending || convertMutation.isPending;
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -326,8 +366,8 @@ export default function JsonFormatterPage() {
                   Input
                   {liveValidation && (
                     <span className={`inline-flex items-center gap-1 text-xs font-normal px-2 py-0.5 rounded-full ${liveValidation.valid
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                       }`}>
                       {liveValidation.valid ? (
                         <>
@@ -365,9 +405,24 @@ export default function JsonFormatterPage() {
                   <Button variant="ghost" size="sm" onClick={handleClear} title="Clear" disabled={!input}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={loadSample}>
-                    Sample
-                  </Button>
+                  <div className="relative">
+                    <Button variant="outline" size="sm" onClick={() => setSampleOpen(!sampleOpen)}>
+                      Sample ▾
+                    </Button>
+                    {sampleOpen && (
+                      <div className="absolute right-0 top-8 z-10 bg-popover border rounded-lg shadow-lg py-1 min-w-[200px]">
+                        {(Object.entries(SAMPLES) as ["simple" | "complex", typeof SAMPLES["simple"]][]).map(([key, s]) => (
+                          <button
+                            key={key}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                            onClick={() => loadSample(key)}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -397,16 +452,40 @@ export default function JsonFormatterPage() {
                 <CardTitle className="text-base">
                   {activeTab === "validate" ? "Validation Result" : "Output"}
                 </CardTitle>
-                {output && activeTab !== "validate" && (
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={handleCopy} title="Copy">
-                      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={handleDownload} title="Download">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  {output && activeTab !== "validate" && activeTab !== "convert" && (
+                    <div className="flex border rounded-md overflow-hidden mr-1">
+                      <button
+                        onClick={() => setViewMode("tree")}
+                        className={`px-2 py-1 text-xs font-medium transition-colors ${viewMode === "tree"
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted text-muted-foreground"
+                          }`}
+                      >
+                        Tree
+                      </button>
+                      <button
+                        onClick={() => setViewMode("raw")}
+                        className={`px-2 py-1 text-xs font-medium transition-colors ${viewMode === "raw"
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted text-muted-foreground"
+                          }`}
+                      >
+                        Raw
+                      </button>
+                    </div>
+                  )}
+                  {output && activeTab !== "validate" && (
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={handleCopy} title="Copy">
+                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleDownload} title="Download">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Keyboard className="h-3 w-3" />
@@ -479,8 +558,8 @@ export default function JsonFormatterPage() {
                 {validationResult && (
                   <div
                     className={`p-4 rounded-lg border ${validationResult.valid
-                        ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-                        : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                      ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                      : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
                       }`}
                   >
                     {validationResult.valid ? (
@@ -551,14 +630,18 @@ export default function JsonFormatterPage() {
 
               {/* Output display */}
               {activeTab !== "validate" && (
-                <div className="flex-1 min-h-[250px] lg:min-h-[350px]">
-                  <textarea
-                    value={output}
-                    readOnly
-                    placeholder="Output will appear here..."
-                    className="w-full h-full min-h-[250px] lg:min-h-[350px] p-3 rounded-lg border border-input bg-muted/30 text-foreground font-mono text-sm resize-none focus:outline-none"
-                    spellCheck={false}
-                  />
+                <div className="flex-1 min-h-[250px] lg:min-h-[350px] border rounded-lg overflow-hidden">
+                  {output && viewMode === "tree" && activeTab !== "convert" ? (
+                    <JsonTreeView json={output} />
+                  ) : (
+                    <textarea
+                      value={output}
+                      readOnly
+                      placeholder="Output will appear here..."
+                      className="w-full h-full min-h-[250px] lg:min-h-[350px] p-3 bg-muted/30 text-foreground font-mono text-sm resize-none focus:outline-none"
+                      spellCheck={false}
+                    />
+                  )}
                 </div>
               )}
 

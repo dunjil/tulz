@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { GoogleAdBanner } from "@/components/shared/google-ad";
 
 interface Props {
     params: Promise<{ slug: string }>;
@@ -73,7 +74,7 @@ export default async function GuideDetailPage({ params }: Props) {
             <Header />
 
             <main className="flex-1 pt-24 pb-16">
-                <div className="container mx-auto max-w-4xl px-4">
+                <div className="container mx-auto max-w-5xl px-4">
                     {/* Back button */}
                     <Link
                         href="/guides"
@@ -116,6 +117,10 @@ export default async function GuideDetailPage({ params }: Props) {
                         </p>
                         <h2 className="text-2xl font-bold mt-10 mb-4">Why is this needed?</h2>
                         <p>{guide.content.whyNeeded}</p>
+                    </div>
+
+                    <div className="mb-12">
+                        <GoogleAdBanner />
                     </div>
 
                     {/* Steps */}
@@ -176,6 +181,11 @@ export default async function GuideDetailPage({ params }: Props) {
                                 </li>
                             ))}
                         </ul>
+                    </div>
+
+                    {/* Ad before FAQ */}
+                    <div className="mb-12">
+                        <GoogleAdBanner />
                     </div>
 
                     {/* FAQ */}

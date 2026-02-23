@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "Free PDF Tools - Merge, Split, Compress, Convert | Tulz",
     description:
       "Merge, split, compress PDFs and convert to Word. Fast, free, and secure.",
-    url: "https://tulz.tools/dashboard/tools/pdf",
+    url: "https://tulz.tools/tools/pdf",
   },
 };
 

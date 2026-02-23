@@ -7,6 +7,7 @@ import { guides } from "@/data/guides";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { BookOpen, Clock, ChevronRight } from "lucide-react";
+import { GoogleAdBanner } from "@/components/shared/google-ad";
 
 export default function GuidesPage() {
     return (
@@ -14,7 +15,7 @@ export default function GuidesPage() {
             <Header />
 
             <main className="flex-1 pt-24 pb-16 px-4">
-                <div className="container mx-auto max-w-5xl">
+                <div className="container mx-auto max-w-7xl">
                     <div className="mb-12 text-center">
                         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-slate-900 dark:text-white">
                             How-To Guides
@@ -24,7 +25,11 @@ export default function GuidesPage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="mb-12">
+                        <GoogleAdBanner />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {guides.map((guide) => (
                             <Link key={guide.slug} href={`/guides/${guide.slug}`}>
                                 <Card className="h-full hover:shadow-xl transition-all duration-300 group border-slate-200 dark:border-slate-800">

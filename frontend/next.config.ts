@@ -8,20 +8,41 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   images: {
-    domains: ["lh3.googleusercontent.com"], // For Google OAuth avatars
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com", // For Google OAuth avatars
+      },
+    ],
   },
-  async rewrites() {
-    // Only apply rewrites in development
-    // In production, nginx proxies /api/v1/* to the backend
-    if (process.env.NODE_ENV === "production") {
-      return [];
-    }
+  async redirects() {
+    // Redirect old /dashboard/tools/* URLs to clean /tools/* (301 permanent for SEO)
     return [
       {
-        source: "/api/v1/:path*",
-        destination: `${BACKEND_URL}/api/v1/:path*`,
+        source: "/dashboard/tools/:path*",
+        destination: "/tools/:path*",
+        permanent: true,
       },
     ];
+  },
+  async rewrites() {
+    const rewrites = [
+      // Serve /tools/* from /dashboard/tools/* internally (no file movement needed)
+      {
+        source: "/tools/:path*",
+        destination: "/dashboard/tools/:path*",
+      },
+    ];
+
+    // In development also proxy API calls to the backend
+    if (process.env.NODE_ENV !== "production") {
+      rewrites.push({
+        source: "/api/v1/:path*",
+        destination: `${BACKEND_URL}/api/v1/:path*`,
+      });
+    }
+
+    return rewrites;
   },
 };
 

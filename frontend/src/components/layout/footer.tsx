@@ -26,37 +26,37 @@ export function Footer() {
             <h3 className="font-semibold mb-4 text-slate-900 dark:text-white">Tools</h3>
             <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
               <li>
-                <Link href="/dashboard/tools/qrcode" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/qrcode" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   QR Code Generator
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/image" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/image" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Image Editor
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/pdf" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/pdf" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   PDF Tools
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/pdf-filler" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/pdf-filler" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   PDF Filler
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/webpdf" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/webpdf" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Website to PDF
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/invoice" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/invoice" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Invoice Generator
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/cv" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/cv" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   CV Builder
                 </Link>
               </li>
@@ -68,37 +68,37 @@ export function Footer() {
             <h3 className="font-semibold mb-4 text-slate-900 dark:text-white">Free Tools</h3>
             <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
               <li>
-                <Link href="/dashboard/tools/calculator" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/calculator" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Calculator
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/json" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/json" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   JSON Formatter
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/diff" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/diff" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Text Diff
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/markdown" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/markdown" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Markdown to PDF
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/excel" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/excel" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Excel to CSV
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/favicon" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/favicon" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Favicon Generator
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/tools/credit-card" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
+                <Link href="/tools/credit-card" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200">
                   Card Generator
                 </Link>
               </li>
@@ -110,7 +110,7 @@ export function Footer() {
             <h3 className="font-semibold mb-4 text-slate-900 dark:text-white">Company</h3>
             <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
               <li>
-                <Link href="/support" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 font-medium flex items-center gap-1">
+                <Link href="https://ko-fi.com/tulzhub" target="_blank" rel="noopener noreferrer" className="hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 font-medium flex items-center gap-1">
                   ❤️ Support Us
                 </Link>
               </li>

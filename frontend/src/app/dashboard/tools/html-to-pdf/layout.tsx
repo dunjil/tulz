@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: tool?.title || "Tulz - Free Online Tools",
     description: tool?.description || "Free online productivity tools.",
     type: "website",
-    url: `https://tulz.tools/dashboard/tools/html-to-pdf`,
+    url: `https://tulz.tools/tools/html-to-pdf`,
   },
   twitter: {
     title: tool?.title || "Tulz - Free Online Tools",

@@ -377,6 +377,20 @@ export const toolsConfig: ToolConfig[] = [
         keywords: ["excel viewer", "open excel online", "edit xlsx", "spreadsheet editor"],
         category: "other",
     },
+    {
+        slug: "dwg-to-pdf",
+        title: "DWG to PDF Converter - Free Online | Tulz",
+        description: "Convert DWG and DXF CAD files to high-quality PDF online. Fast, free, and accurate CAD to PDF conversion.",
+        keywords: ["dwg to pdf", "convert dwg to pdf", "dxf to pdf", "cad to pdf online"],
+        category: "converter",
+    },
+    {
+        slug: "pdf-to-dwg",
+        title: "PDF to DWG Converter - Free Online | Tulz",
+        description: "Convert PDF vector graphics back to editable DWG/DXF files. Best tool for converting architectural PDFs to CAD.",
+        keywords: ["pdf to dwg", "convert pdf to cad", "pdf to dxf", "vector pdf to dwg"],
+        category: "converter",
+    },
 ];
 
 export function getToolConfig(slug: string): ToolConfig | undefined {

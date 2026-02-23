@@ -239,11 +239,22 @@ if [ "$FIRST_TIME" = true ]; then
     apt-get update
     apt-get install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-venv python${PYTHON_VERSION}-dev
 
-    # Install libssl1.1 for Aspose.CAD since Ubuntu 22.04+ dropped it
-    if ! dpkg -l | grep -q libssl1.1; then
-        log "Installing libssl1.1 for Aspose.CAD..."
-        wget -q http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O /tmp/libssl1.1.deb
-        dpkg -i /tmp/libssl1.1.deb || apt-get install -f -y
+    # Install LibreDWG (Source compilation for dwg2dxf / dxf2dwg)
+    if ! command -v dwg2dxf >/dev/null; then
+        log "Compiling and installing LibreDWG from source..."
+        cd /tmp
+        wget -qO- https://ftp.gnu.org/gnu/libredwg/ | grep -o 'href="libredwg-[^"]*\.tar\.gz"' | cut -d'"' -f2 | tail -n 1 > libredwg_latest.txt
+        LIBREDWG_FILE=$(cat libredwg_latest.txt)
+        wget -q "https://ftp.gnu.org/gnu/libredwg/$LIBREDWG_FILE"
+        tar -xzf "$LIBREDWG_FILE"
+        cd "${LIBREDWG_FILE%.tar.gz}"
+        ./configure --disable-shared
+        make -j$(nproc)
+        make install
+        ldconfig
+        cd /tmp
+        rm -rf "libredwg*"
+        log "LibreDWG installed successfully."
     fi
 
     # Node.js
@@ -265,11 +276,22 @@ ensure_python_tools() {
     apt-get update -qq
     apt-get install -y python3-pip python3-venv python3-setuptools || warn "Failed to install some python tools"
     
-    # Ensure libssl1.1 is installed for Aspose.CAD on existing installations too
-    if ! dpkg -l | grep -q libssl1.1; then
-        log "Installing libssl1.1 for Aspose.CAD..."
-        wget -q http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -O /tmp/libssl1.1.deb
-        dpkg -i /tmp/libssl1.1.deb || apt-get install -f -y
+    # Ensure LibreDWG is installed on existing installations too
+    if ! command -v dwg2dxf >/dev/null; then
+        log "Compiling and installing LibreDWG from source (existing server)..."
+        cd /tmp
+        apt-get install -y build-essential libpcre2-dev python3-dev
+        wget -qO- https://ftp.gnu.org/gnu/libredwg/ | grep -o 'href="libredwg-[^"]*\.tar\.gz"' | cut -d'"' -f2 | tail -n 1 > libredwg_latest.txt
+        LIBREDWG_FILE=$(cat libredwg_latest.txt)
+        wget -q "https://ftp.gnu.org/gnu/libredwg/$LIBREDWG_FILE"
+        tar -xzf "$LIBREDWG_FILE"
+        cd "${LIBREDWG_FILE%.tar.gz}"
+        ./configure --disable-shared
+        make -j$(nproc)
+        make install
+        ldconfig
+        cd /tmp
+        rm -rf "libredwg*"
     fi
 }
 
@@ -470,8 +492,8 @@ Description=Tulz API
 After=network.target postgresql.service
 
 [Service]
-User=$APP_USER
-Group=$APP_USER
+User=root
+Group=root
 WorkingDirectory=$APP_DIR/backend
 Environment="PATH=$APP_DIR/backend/venv/bin"
 # Ensure directory exists
@@ -488,8 +510,8 @@ TimeoutStopSec=60
 # KillMode=mixed allows Gunicorn to try to shut down workers gracefully
 KillMode=mixed
 
-# RESOURCE LIMITS: Prevent crashes and OOM loops
-MemoryMax=3.5G
+# RESOURCE LIMITS: Allow sufficient memory for startup (rembg model + PDF libs)
+MemoryMax=6G
 CPUWeight=50
 IOWeight=50
 

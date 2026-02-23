@@ -145,72 +145,72 @@ export function ToolsCollectionStructuredData() {
     {
       name: "QR Code Generator",
       description: "Create customizable QR codes for URLs, WiFi, contacts, and more",
-      url: "https://tulz.tools/dashboard/tools/qrcode",
+      url: "https://tulz.tools/tools/qrcode",
     },
     {
       name: "Calculator",
       description: "Scientific, financial, and unit conversion calculations",
-      url: "https://tulz.tools/dashboard/tools/calculator",
+      url: "https://tulz.tools/tools/calculator",
     },
     {
       name: "Image Editor",
       description: "Remove backgrounds, resize, crop, and convert image formats",
-      url: "https://tulz.tools/dashboard/tools/image",
+      url: "https://tulz.tools/tools/image",
     },
     {
       name: "PDF Tools",
       description: "Merge, split, compress PDFs and convert to Word",
-      url: "https://tulz.tools/dashboard/tools/pdf",
+      url: "https://tulz.tools/tools/pdf",
     },
     {
       name: "PDF Filler",
       description: "Fill, sign, and annotate PDFs online with text, signatures, stamps, and watermarks",
-      url: "https://tulz.tools/dashboard/tools/pdf-filler",
+      url: "https://tulz.tools/tools/pdf-filler",
     },
     {
       name: "Website to PDF",
       description: "Convert any website URL to a high-quality PDF document",
-      url: "https://tulz.tools/dashboard/tools/webpdf",
+      url: "https://tulz.tools/tools/webpdf",
     },
     {
       name: "Excel to CSV",
       description: "Convert Excel files to CSV with multi-sheet support",
-      url: "https://tulz.tools/dashboard/tools/excel",
+      url: "https://tulz.tools/tools/excel",
     },
     {
       name: "Favicon Generator",
       description: "Create all favicon sizes from a single image",
-      url: "https://tulz.tools/dashboard/tools/favicon",
+      url: "https://tulz.tools/tools/favicon",
     },
     {
       name: "JSON Formatter",
       description: "Format, validate, minify, and convert JSON to YAML",
-      url: "https://tulz.tools/dashboard/tools/json",
+      url: "https://tulz.tools/tools/json",
     },
     {
       name: "Markdown to PDF",
       description: "Convert Markdown documents to beautifully styled PDFs",
-      url: "https://tulz.tools/dashboard/tools/markdown",
+      url: "https://tulz.tools/tools/markdown",
     },
     {
       name: "Text Diff",
       description: "Compare two texts and visualize the differences",
-      url: "https://tulz.tools/dashboard/tools/diff",
+      url: "https://tulz.tools/tools/diff",
     },
     {
       name: "Invoice Generator",
       description: "Create professional PDF invoices for your business",
-      url: "https://tulz.tools/dashboard/tools/invoice",
+      url: "https://tulz.tools/tools/invoice",
     },
     {
       name: "Credit Card Generator",
       description: "Generate valid test credit card numbers for development and testing",
-      url: "https://tulz.tools/dashboard/tools/credit-card",
+      url: "https://tulz.tools/tools/credit-card",
     },
     {
       name: "CV Builder",
       description: "Create professional resumes and CVs from Markdown with multiple templates",
-      url: "https://tulz.tools/dashboard/tools/cv",
+      url: "https://tulz.tools/tools/cv",
     },
   ];
 

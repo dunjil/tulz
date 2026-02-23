@@ -47,7 +47,9 @@ export function Header() {
               Guides
             </Link>
             <Link
-              href="/support"
+              href="https://ko-fi.com/tulzhub"
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1.5"
             >
               <Heart className="h-4 w-4" />
@@ -124,7 +126,9 @@ export function Header() {
                 Guides
               </Link>
               <Link
-                href="/support"
+                href="https://ko-fi.com/tulzhub"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors flex items-center gap-1.5"
                 onClick={() => setMobileMenuOpen(false)}
               >

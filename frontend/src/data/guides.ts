@@ -70,7 +70,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF Compressor",
-            href: "/dashboard/tools/pdf-compress",
+            href: "/tools/pdf-compress",
         },
         content: {
             intro: "Many online portals and government application systems limit PDF uploads to 100KB or less. This can be frustrating when your scanned document is several megabytes. This guide shows you how to hit that 100KB target using Tulz.",
@@ -78,7 +78,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your PDF to Tulz",
-                    description: "Go to our [PDF Compressor](/dashboard/tools/pdf-compress) and drag your file into the blue box. We support files up to 50MB.",
+                    description: "Go to our [PDF Compressor](/tools/pdf-compress) and drag your file into the blue box. We support files up to 50MB.",
                 },
                 {
                     title: "Select 'Strong' Compression",
@@ -115,7 +115,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "Background Remover",
-            href: "/dashboard/tools/image-background-remover",
+            href: "/tools/image-background-remover",
         },
         content: {
             intro: "A professional headshot often requires a clean, neutral background. Instead of paying for a studio session, you can use our AI background remover to turn any photo into a professional asset.",
@@ -127,7 +127,7 @@ export const guides: Guide[] = [
                 },
                 {
                     title: "Upload to the AI Tool",
-                    description: "Use our [Background Remover](/dashboard/tools/image-background-remover). Our AI will automatically identify the subject and remove the rest.",
+                    description: "Use our [Background Remover](/tools/image-background-remover). Our AI will automatically identify the subject and remove the rest.",
                 },
                 {
                     title: "Download as a transparent PNG",
@@ -160,7 +160,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "QR Code Generator",
-            href: "/dashboard/tools/qrcode",
+            href: "/tools/qrcode",
         },
         content: {
             intro: "QR codes are essential for connecting offline customers to your online world. Whether it's a menu, a flyer, or a business card, Tulz makes it professional and free.",
@@ -206,7 +206,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "OCR Scanner",
-            href: "/dashboard/tools/ocr",
+            href: "/tools/ocr",
         },
         content: {
             intro: "Optical Character Recognition (OCR) is like magic for your documents. It takes a picture of text and turns it into real characters you can copy into Word or Excel.",
@@ -252,7 +252,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PDF Merger",
-            href: "/dashboard/tools/pdf-merge",
+            href: "/tools/pdf-merge",
         },
         content: {
             intro: "Whether you're submitting a job application or organizing monthly receipts, having one clean PDF is always better than ten messy ones.",
@@ -273,7 +273,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "You can merge PDFs of different sizes (A4 and Letter) - Tulz handles the layout scaling automatically.",
-                "Check the total size after merging; larger documents might need [Compression](/dashboard/tools/pdf-compress)."
+                "Check the total size after merging; larger documents might need [Compression](/tools/pdf-compress)."
             ],
             faq: [
                 {
@@ -297,7 +297,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF Filler",
-            href: "/dashboard/tools/pdf-filler",
+            href: "/tools/pdf-filler",
         },
         content: {
             intro: "Printing, signing, and scanning is a 20th-century workflow. Tulz PDF Filler lets you handle everything digitally, saving time and paper.",
@@ -305,7 +305,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your PDF Form",
-                    description: "Open our [PDF Filler](/dashboard/tools/pdf-filler) and select the document that needs signing or filling.",
+                    description: "Open our [PDF Filler](/tools/pdf-filler) and select the document that needs signing or filling.",
                 },
                 {
                     title: "Add Text and Signature",
@@ -342,7 +342,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Website to PDF",
-            href: "/dashboard/tools/webpdf",
+            href: "/tools/webpdf",
         },
         content: {
             intro: "Saving a webpage as a PDF is the best way to preserve technical documentation, online recipes, or important digital receipts.",
@@ -387,7 +387,7 @@ export const guides: Guide[] = [
         readTime: "4 min read",
         relatedTool: {
             name: "Invoice Generator",
-            href: "/dashboard/tools/invoice",
+            href: "/tools/invoice",
         },
         content: {
             intro: "A sloppy invoice can lead to late payments. A professional, clear invoice builds trust and ensures you get paid faster.",
@@ -432,7 +432,7 @@ export const guides: Guide[] = [
         readTime: "5 min read",
         relatedTool: {
             name: "CV Builder",
-            href: "/dashboard/tools/cv",
+            href: "/tools/cv",
         },
         content: {
             intro: "Most companies use Applicant Tracking Systems (ATS) to scan resumes. If your CV has complex graphics or bad formatting, the robot will reject it before a human ever sees it.",
@@ -477,7 +477,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "JSON Formatter",
-            href: "/dashboard/tools/json",
+            href: "/tools/json",
         },
         content: {
             intro: "JSON is the language of the web, but it's often delivered as a giant, unreadable block of text. Tulz beautifies it in one click.",
@@ -507,7 +507,7 @@ export const guides: Guide[] = [
                 },
                 {
                     q: "Can I convert JSON to CSV?",
-                    a: "Yes! Use our [JSON to CSV](/dashboard/tools/json) converter available in the same suite."
+                    a: "Yes! Use our [JSON to CSV](/tools/json) converter available in the same suite."
                 }
             ]
         },
@@ -522,7 +522,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "HEIC Converter",
-            href: "/dashboard/tools/heic-to-jpg",
+            href: "/tools/heic-to-jpg",
         },
         content: {
             intro: "iPhones save photos as .HEIC to save space, but many websites and Windows apps can't open them. Tulz converts them to high-quality JPGs instantly.",
@@ -567,7 +567,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Instagram Resizer",
-            href: "/dashboard/tools/instagram-resizer",
+            href: "/tools/instagram-resizer",
         },
         content: {
             intro: "Instagram is picky about aspect ratios. If your photo is too tall or too wide, it will cut off the important parts. Tulz ensures you fit the frame perfectly.",
@@ -588,7 +588,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "Portrait (4:5) is scientifically proven to get more engagement because it takes up more vertical space on the screen.",
-                "Check our [Background Remover](/dashboard/tools/image-background-remover) if you need a cleaner aesthetic for your product photos."
+                "Check our [Background Remover](/tools/image-background-remover) if you need a cleaner aesthetic for your product photos."
             ],
             faq: [
                 {
@@ -612,7 +612,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Excel to PDF",
-            href: "/dashboard/tools/excel-to-pdf",
+            href: "/tools/excel-to-pdf",
         },
         content: {
             intro: "Sharing an Excel file can be risky - users might accidentally change formulas or see hidden rows. A PDF is the professional way to share finalized data.",
@@ -657,7 +657,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "Markdown Converter",
-            href: "/dashboard/tools/markdown",
+            href: "/tools/markdown",
         },
         content: {
             intro: "Markdown is great for writing, but PDF is better for sharing. Tulz bridges the gap with professional rendering.",
@@ -702,7 +702,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Favicon Generator",
-            href: "/dashboard/tools/favicon",
+            href: "/tools/favicon",
         },
         content: {
             intro: "A favicon is that small icon in your browser tab. It's a tiny detail that makes your website look professional and trustworthy.",
@@ -747,7 +747,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "Card Generator",
-            href: "/dashboard/tools/credit-card",
+            href: "/tools/credit-card",
         },
         content: {
             intro: "Testing payment systems (like Stripe or PayPal) requires 'valid' card numbers that follow the Luhn algorithm. Tulz generates these for you instantly.",
@@ -792,7 +792,7 @@ export const guides: Guide[] = [
         readTime: "4 min read",
         relatedTool: {
             name: "PDF Compressor",
-            href: "/dashboard/tools/pdf-compress",
+            href: "/tools/pdf-compress",
         },
         content: {
             intro: "The US Department of State's DS-160 portal has notoriously strict file size limits for uploading supporting documents. Your scanned graduation certificates or bank statements must often be under 240KB. Tulz helps you hit this target without losing readability.",
@@ -804,7 +804,7 @@ export const guides: Guide[] = [
                 },
                 {
                     title: "Upload to Tulz PDF Compressor",
-                    description: "Use our [PDF Compressor](/dashboard/tools/pdf-compress). Choose the 'High' compression level (Smallest size) to ensure you stay well under the 240KB threshold.",
+                    description: "Use our [PDF Compressor](/tools/pdf-compress). Choose the 'High' compression level (Smallest size) to ensure you stay well under the 240KB threshold.",
                 },
                 {
                     title: "Verify the 'Final Size'",
@@ -812,7 +812,7 @@ export const guides: Guide[] = [
                 },
             ],
             proTips: [
-                "If you have multiple pages, use our [PDF Splitter](/dashboard/tools/pdf-split) to upload only the essential pages.",
+                "If you have multiple pages, use our [PDF Splitter](/tools/pdf-split) to upload only the essential pages.",
                 "Check that your name and dates are still clearly visible after compression. 'High' compression is aggressive but optimized for text.",
             ],
             faq: [
@@ -822,7 +822,7 @@ export const guides: Guide[] = [
                 },
                 {
                     q: "Can I use Tulz for my digital visa photo?",
-                    a: "Yes! Use our [Passport Photo Resizer](/dashboard/tools/image-to-kb) to get the exact 600x600px square photo required by the DOS."
+                    a: "Yes! Use our [Passport Photo Resizer](/tools/image-to-kb) to get the exact 600x600px square photo required by the DOS."
                 }
             ]
         },
@@ -837,7 +837,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Image to KB Converter",
-            href: "/dashboard/tools/image-to-kb",
+            href: "/tools/image-to-kb",
         },
         content: {
             intro: "Getting an Indian E-Visa requires a square photo (aspect ratio 1:1) with specific dimensions: minimum 350x350 pixels and size between 10KB and 300KB. Most camera photos are too large and the wrong shape.",
@@ -845,19 +845,19 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Square Crop your photo",
-                    description: "Use our [Image Cropper](/dashboard/tools/image-crop) and select the '1:1 (Square)' ratio. Center your face in the frame.",
+                    description: "Use our [Image Cropper](/tools/image-crop) and select the '1:1 (Square)' ratio. Center your face in the frame.",
                 },
                 {
                     title: "Set Dimensions to 350x350",
-                    description: "In the [Resizer tool](/dashboard/tools/image-resize), set the width and height to 350 pixels. This is the minimum requirement for the E-Visa portal.",
+                    description: "In the [Resizer tool](/tools/image-resize), set the width and height to 350 pixels. This is the minimum requirement for the E-Visa portal.",
                 },
                 {
                     title: "Target 50KB for safe upload",
-                    description: "Finally, use the [Image to KB tool](/dashboard/tools/image-to-kb) and set the target size to 50KB. This is well within the 10KB-300KB range.",
+                    description: "Finally, use the [Image to KB tool](/tools/image-to-kb) and set the target size to 50KB. This is well within the 10KB-300KB range.",
                 },
             ],
             proTips: [
-                "Use a plain white or light-colored background. Our [Background Remover](/dashboard/tools/image-background-remover) can help if you don't have a white wall.",
+                "Use a plain white or light-colored background. Our [Background Remover](/tools/image-background-remover) can help if you don't have a white wall.",
                 "Make sure your eyes are open and looking at the camera. The Indian portal is strict about facial expressions.",
             ],
             faq: [
@@ -882,7 +882,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Image to KB Converter",
-            href: "/dashboard/tools/image-to-kb",
+            href: "/tools/image-to-kb",
         },
         content: {
             intro: "Many government job portals (like SSC, UPSC, or State Employment) in various countries require photos and signatures to be exactly between 10KB and 20KB. These limits are extremely difficult to hit using standard software.",
@@ -894,7 +894,7 @@ export const guides: Guide[] = [
                 },
                 {
                     title: "Use the 'Image to KB' Tool",
-                    description: "Go to Tulz [Image to KB Converter](/dashboard/tools/image-to-kb). Upload your photo.",
+                    description: "Go to Tulz [Image to KB Converter](/tools/image-to-kb). Upload your photo.",
                 },
                 {
                     title: "Input '20' in Target Size",
@@ -927,7 +927,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Word to PDF",
-            href: "/dashboard/tools/word-to-pdf",
+            href: "/tools/word-to-pdf",
         },
         content: {
             intro: "Sharing Word documents can be tricky—fonts might go missing or layouts might shift. Converting to PDF ensures your document looks exactly as intended on any device.",
@@ -935,7 +935,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your Word file",
-                    description: "Drag your .doc or .docx file into our [Word to PDF](/dashboard/tools/word-to-pdf) tool. We support files up to 50MB.",
+                    description: "Drag your .doc or .docx file into our [Word to PDF](/tools/word-to-pdf) tool. We support files up to 50MB.",
                 },
                 {
                     title: "Automatic Processing",
@@ -948,7 +948,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "Remove any track-changes or comments from Word before converting if you don't want them visible.",
-                "If your PDF is too large for email, use our [Compressor](/dashboard/tools/pdf-compress)."
+                "If your PDF is too large for email, use our [Compressor](/tools/pdf-compress)."
             ],
             faq: [
                 {
@@ -972,7 +972,7 @@ export const guides: Guide[] = [
         readTime: "4 min read",
         relatedTool: {
             name: "PDF to Word",
-            href: "/dashboard/tools/pdf-to-word",
+            href: "/tools/pdf-to-word",
         },
         content: {
             intro: "We've all been there: you have a PDF you need to edit, but don't have the original Word file. Tulz PDF-to-Word converter recreates the document structure for you.",
@@ -992,13 +992,13 @@ export const guides: Guide[] = [
                 },
             ],
             proTips: [
-                "Scanned PDFs require [OCR](/dashboard/tools/ocr) for text to be editable.",
+                "Scanned PDFs require [OCR](/tools/ocr) for text to be editable.",
                 "If formatting looks slightly off, use Word's 'Clear Formatting' on problematic sections."
             ],
             faq: [
                 {
                     q: "Can I convert protected PDFs?",
-                    a: "You must [Unlock](/dashboard/tools/pdf-unlock) the PDF first if it has a password."
+                    a: "You must [Unlock](/tools/pdf-unlock) the PDF first if it has a password."
                 },
                 {
                     q: "Is the formatting 100% identical?",
@@ -1017,7 +1017,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "JPG to PDF",
-            href: "/dashboard/tools/jpg-to-pdf",
+            href: "/tools/jpg-to-pdf",
         },
         content: {
             intro: "Often, portals require documents in PDF format, but you only have a photo of them. JPG to PDF is the bridge you need.",
@@ -1025,7 +1025,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your Photos",
-                    description: "Drag one or many images into the [JPG to PDF](/dashboard/tools/jpg-to-pdf) tool.",
+                    description: "Drag one or many images into the [JPG to PDF](/tools/jpg-to-pdf) tool.",
                 },
                 {
                     title: "Arrange and Set Page Size",
@@ -1038,7 +1038,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "For documents, use 'Portrait' orientation. For photos, 'Landscape' might be better.",
-                "Use our [Compressor](/dashboard/tools/pdf-compress) if the final PDF is over upload limits."
+                "Use our [Compressor](/tools/pdf-compress) if the final PDF is over upload limits."
             ],
             faq: [
                 {
@@ -1062,7 +1062,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PDF Page Numbers",
-            href: "/dashboard/tools/pdf-page-numbers",
+            href: "/tools/pdf-page-numbers",
         },
         content: {
             intro: "Long documents are impossible to navigate without page numbers. Tulz makes it easy to add them exactly where you want them.",
@@ -1070,7 +1070,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your PDF",
-                    description: "Open our [Page Numbers](/dashboard/tools/pdf-page-numbers) tool and upload your document.",
+                    description: "Open our [Page Numbers](/tools/pdf-page-numbers) tool and upload your document.",
                 },
                 {
                     title: "Choose Position and Style",
@@ -1107,7 +1107,7 @@ export const guides: Guide[] = [
         readTime: "1 min read",
         relatedTool: {
             name: "PDF Rotate",
-            href: "/dashboard/tools/pdf-rotate",
+            href: "/tools/pdf-rotate",
         },
         content: {
             intro: "We've all scanned a document only to find it's sideways. Instead of re-scanning, just fix the orientation with Tulz.",
@@ -1152,7 +1152,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF Crop",
-            href: "/dashboard/tools/pdf-crop",
+            href: "/tools/pdf-crop",
         },
         content: {
             intro: "Cropping a PDF isn't about resizing—it's about removing the parts of the page you don't need, like old headers or wide margins.",
@@ -1160,7 +1160,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload PDF",
-                    description: "Upload your document to the [Crop Tool](/dashboard/tools/pdf-crop).",
+                    description: "Upload your document to the [Crop Tool](/tools/pdf-crop).",
                 },
                 {
                     title: "Select Crop Area",
@@ -1197,7 +1197,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Image Watermark",
-            href: "/dashboard/tools/image-watermark",
+            href: "/tools/image-watermark",
         },
         content: {
             intro: "Posting original work online without a watermark is risky. Tulz lets you brand your entire gallery in seconds.",
@@ -1242,7 +1242,7 @@ export const guides: Guide[] = [
         readTime: "5 min read",
         relatedTool: {
             name: "Social Media Resizer",
-            href: "/dashboard/tools/linkedin-banner-resizer",
+            href: "/tools/linkedin-banner-resizer",
         },
         content: {
             intro: "Every social platform has its own 'sweet spot' for dimensions. If you ignore them, your profile looks amateur with cut-off text and blurry faces.",
@@ -1287,7 +1287,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "WebP to JPG",
-            href: "/dashboard/tools/webp-to-jpg",
+            href: "/tools/webp-to-jpg",
         },
         content: {
             intro: "Google's WebP format offers amazing compression, but many old apps and websites still don't support it. Converting to JPG is the easiest way to ensure your image opens everywhere.",
@@ -1295,7 +1295,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload WebP",
-                    description: "Drag your .webp files into the [WebP to JPG](/dashboard/tools/webp-to-jpg) converter.",
+                    description: "Drag your .webp files into the [WebP to JPG](/tools/webp-to-jpg) converter.",
                 },
                 {
                     title: "Choose Quality",
@@ -1308,7 +1308,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "Only convert to JPG when necessary, as every conversion loses a tiny bit of data.",
-                "Use our [Bulk Converter](/dashboard/tools/image-convert) if you have dozens of files."
+                "Use our [Bulk Converter](/tools/image-convert) if you have dozens of files."
             ],
             faq: [
                 {
@@ -1317,7 +1317,7 @@ export const guides: Guide[] = [
                 },
                 {
                     q: "Can I convert back from JPG to WebP?",
-                    a: "Yes! Use our [WebP Converter](/dashboard/tools/webp-converter) to save space on your website."
+                    a: "Yes! Use our [WebP Converter](/tools/webp-converter) to save space on your website."
                 }
             ]
         },
@@ -1332,7 +1332,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PDF Splitter",
-            href: "/dashboard/tools/pdf-split",
+            href: "/tools/pdf-split",
         },
         content: {
             intro: "Splitting a PDF is the process of breaking a single large file into multiple smaller ones, or extracting specific pages you need.",
@@ -1340,7 +1340,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your PDF",
-                    description: "Drag your file into the [Split Tool](/dashboard/tools/pdf-split).",
+                    description: "Drag your file into the [Split Tool](/tools/pdf-split).",
                 },
                 {
                     title: "Define Ranges",
@@ -1358,7 +1358,7 @@ export const guides: Guide[] = [
             faq: [
                 {
                     q: "Can I split password-protected PDFs?",
-                    a: "You'll need to [Unlock](/dashboard/tools/pdf-unlock) them first using the password before splitting."
+                    a: "You'll need to [Unlock](/tools/pdf-unlock) them first using the password before splitting."
                 },
                 {
                     q: "Will the original file be deleted?",
@@ -1377,7 +1377,7 @@ export const guides: Guide[] = [
         readTime: "1 min read",
         relatedTool: {
             name: "PDF Unlocker",
-            href: "/dashboard/tools/pdf-unlock",
+            href: "/tools/pdf-unlock",
         },
         content: {
             intro: "Tired of entering the same password every time you open a bank statement? Tulz can remove that protection permanently if you have the current password.",
@@ -1385,7 +1385,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload Protected PDF",
-                    description: "Drag your locked file into the [Unlock Tool](/dashboard/tools/pdf-unlock).",
+                    description: "Drag your locked file into the [Unlock Tool](/tools/pdf-unlock).",
                 },
                 {
                     title: "Enter Password",
@@ -1422,7 +1422,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PDF Protector",
-            href: "/dashboard/tools/pdf-protect",
+            href: "/tools/pdf-protect",
         },
         content: {
             intro: "Sending tax returns or legal contracts via email? Always lock them with a password first to ensure only the intended recipient can read them.",
@@ -1467,7 +1467,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Image Compressor",
-            href: "/dashboard/tools/image-compress",
+            href: "/tools/image-compress",
         },
         content: {
             intro: "Large images are the #1 reason websites are slow. Compressing them before upload can cut page load times in half.",
@@ -1475,7 +1475,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload your Photos",
-                    description: "Drag up to 20 images into the [Compressor](/dashboard/tools/image-compress).",
+                    description: "Drag up to 20 images into the [Compressor](/tools/image-compress).",
                 },
                 {
                     title: "Adjust Quality Level",
@@ -1488,7 +1488,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "For the web, keep every image under 200KB if possible.",
-                "Use WebP format (via our [Converter](/dashboard/tools/webp-converter)) for even better compression than JPG."
+                "Use WebP format (via our [Converter](/tools/webp-converter)) for even better compression than JPG."
             ],
             faq: [
                 {
@@ -1512,7 +1512,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Image Resizer",
-            href: "/dashboard/tools/image-resize",
+            href: "/tools/image-resize",
         },
         content: {
             intro: "Uploading a 4000px photo and then showing it at 400px on your blog is a huge performance mistake. You're making users download 10x more data than they need.",
@@ -1557,7 +1557,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "Image to KB",
-            href: "/dashboard/tools/image-to-kb",
+            href: "/tools/image-to-kb",
         },
         content: {
             intro: "Many government and passport portals (like in India, Nigeria, or the UK) have a hard limit of 20KB for photos. This is extremely small for modern cameras.",
@@ -1602,7 +1602,7 @@ export const guides: Guide[] = [
         readTime: "1 min read",
         relatedTool: {
             name: "Image Rotator",
-            href: "/dashboard/tools/image-rotate",
+            href: "/tools/image-rotate",
         },
         content: {
             intro: "Sometimes your phone camera doesn't detect the 'Up' direction correctly. Fix it in one click with Tulz.",
@@ -1647,7 +1647,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PDF Compressor",
-            href: "/dashboard/tools/pdf-compress",
+            href: "/tools/pdf-compress",
         },
         content: {
             intro: "A high-res scan can easily be 50MB, but Gmail only allows 25MB. Shrink it safely with Tulz.",
@@ -1692,7 +1692,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PDF Organizer",
-            href: "/dashboard/tools/pdf-organize",
+            href: "/tools/pdf-organize",
         },
         content: {
             intro: "Sometimes you scan documents in the wrong order. Instead of rescanning, just drag and drop the pages into place.",
@@ -1718,7 +1718,7 @@ export const guides: Guide[] = [
             faq: [
                 {
                     q: "Can I add pages from a different file?",
-                    a: "Yes! Use our [Merge Tool](/dashboard/tools/pdf-merge) first, then organize the result."
+                    a: "Yes! Use our [Merge Tool](/tools/pdf-merge) first, then organize the result."
                 },
                 {
                     q: "Is there a page limit?",
@@ -1737,7 +1737,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF Watermark",
-            href: "/dashboard/tools/pdf-add-watermark",
+            href: "/tools/pdf-add-watermark",
         },
         content: {
             intro: "Watermarking is the best way to claim ownership and prevent unauthorized copying of your PDF documents.",
@@ -1782,7 +1782,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF Watermark Remover",
-            href: "/dashboard/tools/pdf-remove-watermark",
+            href: "/tools/pdf-remove-watermark",
         },
         content: {
             intro: "Have an old document with 'Draft' still on it? Our tool can help identify and remove these overlays to give you a clean final version.",
@@ -1803,7 +1803,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "Works best on text watermarks over clear backgrounds.",
-                "If the watermark is extremely complex, try our [PDF Crop](/dashboard/tools/pdf-crop) tool to just cut that section out."
+                "If the watermark is extremely complex, try our [PDF Crop](/tools/pdf-crop) tool to just cut that section out."
             ],
             faq: [
                 {
@@ -1827,7 +1827,7 @@ export const guides: Guide[] = [
         readTime: "4 min read",
         relatedTool: {
             name: "Scientific Calculator",
-            href: "/dashboard/tools/calculator",
+            href: "/tools/calculator",
         },
         content: {
             intro: "From basic arithmetic to complex trigonometry and logarithmic functions, a scientific calculator is essential for students and professionals alike.",
@@ -1835,7 +1835,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Access the Calculator",
-                    description: "Open the [Scientific Calculator](/dashboard/tools/calculator) in your browser.",
+                    description: "Open the [Scientific Calculator](/tools/calculator) in your browser.",
                 },
                 {
                     title: "Switch Modes",
@@ -1872,7 +1872,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "Text Diff Tool",
-            href: "/dashboard/tools/diff",
+            href: "/tools/diff",
         },
         content: {
             intro: "Manually checking two text files for changes is prone to human error. Our Text Diff tool automates the process, highlighting every addition and deletion.",
@@ -1917,7 +1917,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "Excel/CSV Converter",
-            href: "/dashboard/tools/excel",
+            href: "/tools/excel",
         },
         content: {
             intro: "Excel files are great for humans, but CSV (Comma Separated Values) is the universal language for databases and programming.",
@@ -1925,7 +1925,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload Excel File",
-                    description: "Drag your .xlsx or .xls file into the [Converter](/dashboard/tools/excel).",
+                    description: "Drag your .xlsx or .xls file into the [Converter](/tools/excel).",
                 },
                 {
                     title: "Select CS V Delimiter",
@@ -1962,7 +1962,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "HTML to PDF",
-            href: "/dashboard/tools/html-to-pdf",
+            href: "/tools/html-to-pdf",
         },
         content: {
             intro: "Need to turn a dynamic webpage or a custom HTML template into a PDF? Our converter renders your code exactly as a browser would.",
@@ -2007,7 +2007,7 @@ export const guides: Guide[] = [
         readTime: "4 min read",
         relatedTool: {
             name: "Image Converter",
-            href: "/dashboard/tools/image-convert",
+            href: "/tools/image-convert",
         },
         content: {
             intro: "WebP is a modern image format that provides superior lossless and lossy compression for images on the web. It's essential for Core Web Vitals.",
@@ -2015,7 +2015,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload Images",
-                    description: "Drag your JPG or PNG files into our [Bulk Converter](/dashboard/tools/image-convert).",
+                    description: "Drag your JPG or PNG files into our [Bulk Converter](/tools/image-convert).",
                 },
                 {
                     title: "Select WebP Format",
@@ -2052,7 +2052,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "JPG to PNG",
-            href: "/dashboard/tools/jpg-to-png",
+            href: "/tools/jpg-to-png",
         },
         content: {
             intro: "JPG is great for photos, but PNG is better for graphics and icons. Converting between them is easy with Tulz.",
@@ -2072,7 +2072,7 @@ export const guides: Guide[] = [
                 },
             ],
             proTips: [
-                "Note that converting JPG to PNG won't automatically make the background transparent. You need the [Background Remover](/dashboard/tools/image-background-remover) for that.",
+                "Note that converting JPG to PNG won't automatically make the background transparent. You need the [Background Remover](/tools/image-background-remover) for that.",
                 "PNG files are usually larger than JPGs because they don't use 'lossy' shortcuts."
             ],
             faq: [
@@ -2097,7 +2097,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "PNG to JPG",
-            href: "/dashboard/tools/png-to-jpg",
+            href: "/tools/png-to-jpg",
         },
         content: {
             intro: "PNG files can be very large because they save every single pixel's detail. For most photos, a JPG is 5x smaller and looks exactly the same to the human eye.",
@@ -2105,7 +2105,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload PNG",
-                    description: "Drag your large PNG files into the [Converter](/dashboard/tools/png-to-jpg).",
+                    description: "Drag your large PNG files into the [Converter](/tools/png-to-jpg).",
                 },
                 {
                     title: "Adjust Quality",
@@ -2142,7 +2142,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF to JPG",
-            href: "/dashboard/tools/pdf-to-jpg",
+            href: "/tools/pdf-to-jpg",
         },
         content: {
             intro: "PDFs are great for documents, but sometimes you just need a picture of a page. Our converter handles the extraction for you.",
@@ -2163,7 +2163,7 @@ export const guides: Guide[] = [
             ],
             proTips: [
                 "We set the resolution to 300 DPI by default, which is perfect for both screen viewing and printing.",
-                "If the JPGs are still too large, use our [Image Compressor](/dashboard/tools/image-compress)."
+                "If the JPGs are still too large, use our [Image Compressor](/tools/image-compress)."
             ],
             faq: [
                 {
@@ -2187,7 +2187,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PowerPoint to PDF",
-            href: "/dashboard/tools/powerpoint-to-pdf",
+            href: "/tools/powerpoint-to-pdf",
         },
         content: {
             intro: "PowerPoint files often look different depending on the version of Office installed. A PDF locks your fonts, animations, and layouts permanently.",
@@ -2195,7 +2195,7 @@ export const guides: Guide[] = [
             steps: [
                 {
                     title: "Upload PPTX File",
-                    description: "Drag your presentation into the [Converter](/dashboard/tools/powerpoint-to-pdf).",
+                    description: "Drag your presentation into the [Converter](/tools/powerpoint-to-pdf).",
                 },
                 {
                     title: "Automatic Conversion",
@@ -2232,7 +2232,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "WebP to PNG",
-            href: "/dashboard/tools/webp-to-png",
+            href: "/tools/webp-to-png",
         },
         content: {
             intro: "WebP is the future of the web, but PNG is still the standard for design software like older versions of Photoshop or GIMP. Tulz makes the round-trip easy.",
@@ -2252,7 +2252,7 @@ export const guides: Guide[] = [
                 },
             ],
             proTips: [
-                "If your image doesn't need transparency, [WebP to JPG](/dashboard/tools/webp-to-jpg) will result in a much smaller file.",
+                "If your image doesn't need transparency, [WebP to JPG](/tools/webp-to-jpg) will result in a much smaller file.",
                 "Bulk conversion is supported—convert all your assets in one go."
             ],
             faq: [
@@ -2277,7 +2277,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF to Excel",
-            href: "/dashboard/tools/pdf-to-excel",
+            href: "/tools/pdf-to-excel",
         },
         content: {
             intro: "PDFs are great for sharing, but terrible for analysis. This guide shows you how to convert your PDF tables into a usable Excel format.",
@@ -2307,7 +2307,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF to PowerPoint",
-            href: "/dashboard/tools/pdf-to-powerpoint",
+            href: "/tools/pdf-to-powerpoint",
         },
         content: {
             intro: "Got a great PDF report but need to present it? Convert it into a dynamic PowerPoint presentation effortlessly.",
@@ -2337,7 +2337,7 @@ export const guides: Guide[] = [
         readTime: "3 min read",
         relatedTool: {
             name: "PDF to DWG",
-            href: "/dashboard/tools/pdf-to-dwg",
+            href: "/tools/pdf-to-dwg",
         },
         content: {
             intro: "Many architectural plans are shared as PDFs to lock the design, but what if you need to edit them? Our tool extracts the vector paths from a PDF and reconstructs them into an editable DWG file.",
@@ -2367,7 +2367,7 @@ export const guides: Guide[] = [
         readTime: "2 min read",
         relatedTool: {
             name: "DWG to PDF",
-            href: "/dashboard/tools/dwg-to-pdf",
+            href: "/tools/dwg-to-pdf",
         },
         content: {
             intro: "Sharing CAD files directly can be risky and inconvenient. The recipient might not have AutoCAD installed or might accidentally alter the design. Converting your drawings to PDF ensures they remain viewable and unedited.",

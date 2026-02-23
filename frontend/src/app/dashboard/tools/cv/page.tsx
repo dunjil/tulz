@@ -71,7 +71,10 @@ export default function CvGeneratorPage() {
   const [htmlPreview, setHtmlPreview] = useState<string>("");
   const [previewScale, setPreviewScale] = useState(1);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("editor");
+  const [pageCount, setPageCount] = useState(1);
+  const A4_HEIGHT_PX = 297 * 3.7795; // 297mm in px at 96dpi
   const { user, isAuthenticated } = useAuth();
   const isPro = user?.subscription_tier && ["pro", "premium", "unlimited"].includes(user.subscription_tier);
   const router = useRouter();
@@ -143,6 +146,21 @@ export default function CvGeneratorPage() {
 
     return () => observer.disconnect();
   }, []);
+
+  // Count A4 pages from rendered content height
+  useEffect(() => {
+    if (!contentRef.current || !htmlPreview) {
+      setPageCount(1);
+      return;
+    }
+    const obs = new ResizeObserver(() => {
+      if (contentRef.current) {
+        setPageCount(Math.max(1, Math.ceil(contentRef.current.scrollHeight / A4_HEIGHT_PX)));
+      }
+    });
+    obs.observe(contentRef.current);
+    return () => obs.disconnect();
+  }, [htmlPreview, A4_HEIGHT_PX]);
 
   // Handle template selection
   const handleTemplateSelect = (templateId: string) => {
@@ -222,7 +240,7 @@ export default function CvGeneratorPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -267,7 +285,7 @@ export default function CvGeneratorPage() {
         </Tabs>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
+      <div className="grid lg:grid-cols-2 xl:grid-cols-[42%_58%] gap-6 items-start">
         {/* Editor Panel */}
         <div className={`${activeTab !== "editor" ? "hidden lg:block" : "block"}`}>
           <Card className="border-none shadow-xl bg-background/60 backdrop-blur-sm">
@@ -422,6 +440,11 @@ export default function CvGeneratorPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded">A4 PDF</span>
+                  {pageCount > 0 && (
+                    <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded">
+                      {pageCount} page{pageCount !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
               </CardTitle>
             </CardHeader>
@@ -432,7 +455,7 @@ export default function CvGeneratorPage() {
               >
                 {htmlPreview ? (
                   <div
-                    className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] origin-top transition-all duration-300 ring-1 ring-black/5"
+                    className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] origin-top transition-all duration-300 ring-1 ring-black/5 relative"
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -442,9 +465,26 @@ export default function CvGeneratorPage() {
                     <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]"></div>
                     <style dangerouslySetInnerHTML={{ __html: CV_TEMPLATES[template]?.css || "" }} />
                     <div
+                      ref={contentRef}
                       className="cv-document relative z-10"
                       dangerouslySetInnerHTML={{ __html: htmlPreview }}
                     />
+
+                    {/* Page break overlays at every 297mm */}
+                    {pageCount > 1 && Array.from({ length: pageCount - 1 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute left-0 right-0 z-20 pointer-events-none"
+                        style={{ top: `${(i + 1) * 297}mm` }}
+                      >
+                        <div className="border-t-2 border-dashed border-blue-400/60 w-full" />
+                        <div className="flex items-center justify-between px-3 py-0.5 bg-blue-50/90 dark:bg-blue-950/60">
+                          <span className="text-[8px] text-blue-400 font-medium">↑ Page {i + 1}</span>
+                          <span className="text-[8px] text-blue-500 font-bold">Page {i + 2} of {pageCount}</span>
+                          <span className="text-[8px] text-blue-400 font-medium">Page {i + 2} ↓</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="h-full min-h-[500px] w-full border-2 border-dashed rounded-2xl bg-background/50 flex flex-col items-center justify-center p-8 text-center space-y-4">
