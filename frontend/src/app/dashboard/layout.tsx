@@ -19,10 +19,10 @@ export default function DashboardLayout({
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const button = target.closest("button");
+      const clickable = target.closest("button, a");
       if (
-        button &&
-        button.textContent?.toLowerCase().includes("download") &&
+        clickable &&
+        clickable.textContent?.toLowerCase().match(/(download|save|export|get pdf|get file)/) &&
         !sessionStorage.getItem("support_shown")
       ) {
         // Extract tool slug from URL, e.g. /tools/pdf-merge → "pdf-merge"
