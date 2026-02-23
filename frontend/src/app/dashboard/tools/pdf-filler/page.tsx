@@ -29,6 +29,7 @@ import { Slider } from "@/components/ui/slider";
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { SupportButton } from "@/components/shared/support-button";
 import { FreeBadge } from "@/components/shared/free-badge";
+import { UsageBadge } from "@/components/shared/usage-badge";
 import {
   FileText,
   Download,
@@ -2729,17 +2730,17 @@ export default function PDFFillerPage() {
             <FileText className="h-6 w-6 text-primary" />
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-lg font-semibold">PDF Filler</h1>
-              <p className="text-xs text-muted-foreground">
-                Fill, sign, and annotate PDFs
-              </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <SupportButton size="sm" />
-          <FreeBadge />
-        </div>
-      </div>
+                <div>
+                  <h1 className="text-lg font-semibold">PDF Filler</h1>
+                  <p className="text-xs text-muted-foreground">
+                    Fill, sign, and annotate PDFs
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <SupportButton size="sm" />
+                  <FreeBadge />
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
