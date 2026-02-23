@@ -13,6 +13,7 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from weasyprint import HTML, CSS
+from num2words import num2words
 
 from app.api.deps import ClientIP, DbSession, OptionalUser, UserAgent
 from app.config import settings
@@ -61,6 +62,7 @@ class WatermarkConfig(BaseModel):
 class InvoiceRequest(BaseModel):
     """Request to generate an invoice."""
     # Invoice details
+    title: str = Field(default="INVOICE", max_length=50, description="Title of the document, e.g. INVOICE, PROFORMA INVOICE")
     invoice_number: str = Field(..., max_length=50)
     invoice_date: str = Field(..., description="Date in YYYY-MM-DD format")
     due_date: Optional[str] = Field(default=None, description="Due date in YYYY-MM-DD format")
@@ -77,10 +79,12 @@ class InvoiceRequest(BaseModel):
     currency_symbol: str = Field(default="$", max_length=5)
 
     # Optional fields
-    notes: Optional[str] = Field(default=None, max_length=1000)
+    notes: Optional[str] = Field(default=None, max_length=5000)
     terms: Optional[str] = Field(default=None, max_length=1000)
+    amount_in_words: Optional[str] = Field(default=None, max_length=200, description="Explicit amount in words. If missing, omitted.")
     logo_url: Optional[str] = Field(default=None, description="URL to company logo")
     signature_data: Optional[str] = Field(default=None, description="Base64 encoded signature image")
+    client_signature_data: Optional[str] = Field(default=None, description="Base64 encoded client signature image")
 
     # Styling
     primary_color: str = Field(default="#3498db", description="Primary color hex")
@@ -101,6 +105,76 @@ class InvoiceResponse(BaseModel):
     total: Optional[float] = None
     subtotal: Optional[float] = None
     tax_total: Optional[float] = None
+
+
+CURRENCY_NAMES = {
+    "USD": ("Dollar", "Dollars", "Cent", "Cents"),
+    "EUR": ("Euro", "Euros", "Cent", "Cents"),
+    "GBP": ("Pound", "Pounds", "Penny", "Pence"),
+    "JPY": ("Yen", "Yen", "Sen", "Sen"),
+    "CNY": ("Yuan", "Yuan", "Jiao", "Jiao"),
+    "CHF": ("Franc", "Francs", "Rappen", "Rappen"),
+    "CAD": ("Canadian Dollar", "Canadian Dollars", "Cent", "Cents"),
+    "AUD": ("Australian Dollar", "Australian Dollars", "Cent", "Cents"),
+    "NZD": ("New Zealand Dollar", "New Zealand Dollars", "Cent", "Cents"),
+    "SGD": ("Singapore Dollar", "Singapore Dollars", "Cent", "Cents"),
+    "HKD": ("Hong Kong Dollar", "Hong Kong Dollars", "Cent", "Cents"),
+    "INR": ("Rupee", "Rupees", "Paisa", "Paise"),
+    "KRW": ("Won", "Won", "Jeon", "Jeon"),
+    "MXN": ("Mexican Peso", "Mexican Pesos", "Centavo", "Centavos"),
+    "BRL": ("Real", "Reais", "Centavo", "Centavos"),
+    "ZAR": ("Rand", "Rand", "Cent", "Cents"),
+    "NGN": ("Naira", "Naira", "Kobo", "Kobo"),
+    "AED": ("Dirham", "Dirhams", "Fils", "Fils"),
+    "SAR": ("Riyal", "Riyals", "Halala", "Halalat"),
+    "ILS": ("Shekel", "Shekels", "Agora", "Agorot"),
+    "TRY": ("Lira", "Liras", "Kurus", "Kurus"),
+    "PLN": ("Zloty", "Zlotys", "Grosz", "Groszy"),
+    "SEK": ("Krona", "Kronor", "Ore", "Ore"),
+    "NOK": ("Krone", "Kroner", "Ore", "Ore"),
+    "DKK": ("Krone", "Kroner", "Ore", "Ore"),
+    "THB": ("Baht", "Baht", "Satang", "Satang"),
+    "MYR": ("Ringgit", "Ringgit", "Sen", "Sen"),
+    "PHP": ("Peso", "Pesos", "Centavo", "Centavos"),
+    "IDR": ("Rupiah", "Rupiah", "Sen", "Sen"),
+    "VND": ("Dong", "Dong", "Hao", "Hao"),
+    "EGP": ("Egyptian Pound", "Egyptian Pounds", "Piastre", "Piastres"),
+    "KES": ("Kenyan Shilling", "Kenyan Shillings", "Cent", "Cents"),
+    "GHS": ("Cedi", "Cedis", "Pesewa", "Pesewas"),
+    "PKR": ("Pakistani Rupee", "Pakistani Rupees", "Paisa", "Paise"),
+    "BDT": ("Taka", "Taka", "Poisha", "Poisha"),
+    "COP": ("Colombian Peso", "Colombian Pesos", "Centavo", "Centavos"),
+    "ARS": ("Argentine Peso", "Argentine Pesos", "Centavo", "Centavos"),
+    "CLP": ("Chilean Peso", "Chilean Pesos", "Centavo", "Centavos"),
+    "PEN": ("Sol", "Soles", "Centimo", "Centimos"),
+    "RUB": ("Ruble", "Rubles", "Kopeck", "Kopecks"),
+    "UAH": ("Hryvnia", "Hryvnias", "Kopiyka", "Kopiykas"),
+    "CZK": ("Koruna", "Korunas", "Haler", "Halere"),
+    "HUF": ("Forint", "Forints", "Filler", "Fillers"),
+    "RON": ("Leu", "Lei", "Ban", "Bani"),
+    "BTC": ("Bitcoin", "Bitcoins", "Satoshi", "Satoshis"),
+    "ETH": ("Ether", "Ether", "Gwei", "Gwei"),
+    "USDT": ("Tether", "Tether", "Cent", "Cents"),
+}
+
+def get_amount_in_words(amount: float, currency_code: str) -> str:
+    """Safely convert amount to words, with proper currency units."""
+    integer_part = int(amount)
+    fractional_part = int(round((amount - integer_part) * 100))
+    
+    major_sing, major_plur, minor_sing, minor_plur = CURRENCY_NAMES.get(
+        currency_code.upper(), 
+        (currency_code, currency_code + "s", "Cent", "Cents")
+    )
+    
+    words = num2words(integer_part).replace("-", " ")
+    words += f" {major_sing}" if integer_part == 1 else f" {major_plur}"
+    
+    if fractional_part > 0:
+        words += f" and {num2words(fractional_part).replace('-', ' ')}"
+        words += f" {minor_sing}" if fractional_part == 1 else f" {minor_plur}"
+        
+    return words
 
 
 def generate_invoice_html(data: InvoiceRequest) -> tuple[str, float, float, float]:
@@ -154,7 +228,7 @@ def generate_invoice_html(data: InvoiceRequest) -> tuple[str, float, float, floa
     to_html = format_address(data.to_address)
 
     # Notes and terms
-    notes_html = f'<div style="margin-top: 30px;"><h4 style="color: {data.primary_color};">Notes</h4><p style="color: #666;">{data.notes}</p></div>' if data.notes else ""
+    notes_html = f'<div style="margin-top: 30px;"><h4 style="color: {data.primary_color};">Notes</h4><p style="color: #666; font-size: 12px;">{data.notes}</p></div>' if data.notes else ""
     terms_html = f'<div style="margin-top: 20px;"><h4 style="color: {data.primary_color};">Terms & Conditions</h4><p style="color: #666; font-size: 12px;">{data.terms}</p></div>' if data.terms else ""
 
     # Logo
@@ -179,6 +253,31 @@ def generate_invoice_html(data: InvoiceRequest) -> tuple[str, float, float, floa
             </div>
             '''
 
+    # Signature HTML — client signature is optional
+    signature_html = ""
+    if data.show_signature_section:
+        justify = "space-between" if data.client_signature_data else "flex-end"
+        client_sig_html = ""
+        if data.client_signature_data:
+            client_sig_html = f'''
+                <div style="width: 45%;">
+                    <div style="margin-bottom: 8px;"><img src="{data.client_signature_data}" style="max-height: 60px; max-width: 180px;" alt="Client Signature"></div>
+                    <div style="border-top: 1px solid #333; padding-top: 8px;">
+                        <p style="margin: 0; font-size: 11px; color: #666;">Client Signature</p>
+                    </div>
+                </div>'''
+        auth_sig_img = f'<div style="margin-bottom: 8px;"><img src="{data.signature_data}" style="max-height: 60px; max-width: 180px;" alt="Signature"></div>' if data.signature_data else '<div style="height: 50px;"></div>'
+        signature_html = f'''<!-- Signature Section -->
+            <div style="margin-top: 40px; display: flex; justify-content: {justify};">
+                {client_sig_html}
+                <div style="width: 45%;">
+                    {auth_sig_img}
+                    <div style="border-top: 1px solid #333; padding-top: 8px;">
+                        <p style="margin: 0; font-size: 11px; color: #666;">Authorized Signature</p>
+                    </div>
+                </div>
+            </div>'''
+
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -198,7 +297,7 @@ def generate_invoice_html(data: InvoiceRequest) -> tuple[str, float, float, floa
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <h1 style="margin: 0; color: {data.primary_color}; font-size: 28px; font-weight: 300;">INVOICE</h1>
+                    <h1 style="margin: 0; color: {data.primary_color}; font-size: 28px; font-weight: 300;">{data.title.upper()}</h1>
                     <div style="margin-top: 8px; color: #666; font-size: 12px;">
                         <p style="margin: 3px 0;"><strong>Invoice #:</strong> {data.invoice_number}</p>
                         <p style="margin: 3px 0;"><strong>Date:</strong> {data.invoice_date}</p>
@@ -246,23 +345,15 @@ def generate_invoice_html(data: InvoiceRequest) -> tuple[str, float, float, floa
                 </div>
             </div>
 
+            {f'''<div style="margin-top: 30px; margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-radius: 6px;">
+                <h4 style="margin: 0 0 4px 0; color: #666; font-size: 11px; text-transform: uppercase;">Amount in Words</h4>
+                <p style="margin: 0; color: #333; font-size: 12px; font-weight: 500; text-transform: capitalize;">{data.amount_in_words}</p>
+            </div>''' if data.amount_in_words else ''}
+
             {notes_html}
             {terms_html}
 
-            {f'''<!-- Signature Section -->
-            <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-                <div style="width: 45%;">
-                    <div style="border-top: 1px solid #333; padding-top: 8px; margin-top: 50px;">
-                        <p style="margin: 0; font-size: 11px; color: #666;">Client Signature</p>
-                    </div>
-                </div>
-                <div style="width: 45%;">
-                    {'<div style="margin-bottom: 8px;"><img src="' + data.signature_data + '" style="max-height: 60px; max-width: 180px;" alt="Signature"></div>' if data.signature_data else '<div style="height: 50px;"></div>'}
-                    <div style="border-top: 1px solid #333; padding-top: 8px;">
-                        <p style="margin: 0; font-size: 11px; color: #666;">Authorized Signature</p>
-                    </div>
-                </div>
-            </div>''' if data.show_signature_section else ''}
+            {signature_html}
 
             <!-- Footer -->
             <div style="margin-top: 30px; padding-top: 12px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 10px;">

@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     type: "website",
     url: `https://tulz.tools/tools/twitter-header-resizer`,
   },
+  alternates: {
+    canonical: `https://tulz.tools/tools/twitter-header-resizer`,
+  },
   twitter: {
     title: tool?.title || "Tulz - Free Online Tools",
     description: tool?.description || "Free online productivity tools.",

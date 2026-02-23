@@ -163,20 +163,7 @@ export default function AdminUsersPage() {
     },
   });
 
-  const setProMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const res = await api.post(`/admin/users/${userId}/set-pro`);
-      return res.data;
-    },
-    onSuccess: () => {
-      toast.success("User upgraded to Pro!");
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "user", selectedUser] });
-    },
-    onError: () => {
-      toast.error("Failed to upgrade user");
-    },
-  });
+
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {

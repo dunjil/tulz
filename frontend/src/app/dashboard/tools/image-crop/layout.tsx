@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     type: "website",
     url: `https://tulz.tools/tools/image-crop`,
   },
+  alternates: {
+    canonical: `https://tulz.tools/tools/image-crop`,
+  },
   twitter: {
     title: tool?.title || "Tulz - Free Online Tools",
     description: tool?.description || "Free online productivity tools.",

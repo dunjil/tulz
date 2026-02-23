@@ -3,13 +3,19 @@
 import { useState } from "react";
 import { Heart, X, Coffee, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
+import { IconX, IconWhatsApp, IconLinkedIn, IconFacebook } from "@/components/shared/icons/social-icons";
+import { cn } from "@/lib/utils";
 interface SupportBannerProps {
     toolName?: string;
     onDismiss?: () => void;
 }
 
 const SITE_URL = "https://tulz.tools";
+
+function getToolUrl(slug: string): string {
+    if (!slug || slug === "Tulz") return SITE_URL;
+    return `${SITE_URL}/tools/${slug}`;
+}
 
 /** Human-readable name from a slug */
 function slugToName(slug: string): string {
@@ -107,9 +113,10 @@ function getShareText(slug: string): string {
     return MESSAGES[slug] || `Just used the ${slugToName(slug)} on Tulz — free online tools that actually work.`;
 }
 
-function buildShareUrl(platform: string, text: string): string {
-    const encoded = encodeURIComponent(text + " " + SITE_URL);
-    const encodedUrl = encodeURIComponent(SITE_URL);
+function buildShareUrl(platform: string, text: string, toolSlug: string): string {
+    const toolUrl = getToolUrl(toolSlug);
+    const encoded = encodeURIComponent(text + "\n\n" + toolUrl);
+    const encodedUrl = encodeURIComponent(toolUrl);
     const encodedText = encodeURIComponent(text);
     switch (platform) {
         case "x": return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
@@ -121,10 +128,10 @@ function buildShareUrl(platform: string, text: string): string {
 }
 
 const PLATFORMS = [
-    { id: "x", label: "X", bg: "bg-black hover:bg-gray-800 text-white" },
-    { id: "whatsapp", label: "WhatsApp", bg: "bg-[#25D366] hover:bg-[#1ebe5d] text-white" },
-    { id: "linkedin", label: "LinkedIn", bg: "bg-[#0077B5] hover:bg-[#005f91] text-white" },
-    { id: "facebook", label: "Facebook", bg: "bg-[#1877F2] hover:bg-[#1668d3] text-white" },
+    { id: "x", label: "X", icon: IconX, bg: "bg-black hover:bg-gray-800 text-white" },
+    { id: "whatsapp", label: "WhatsApp", icon: IconWhatsApp, bg: "bg-[#25D366] hover:bg-[#1ebe5d] text-white" },
+    { id: "linkedin", label: "LinkedIn", icon: IconLinkedIn, bg: "bg-[#0077B5] hover:bg-[#005f91] text-white" },
+    { id: "facebook", label: "Facebook", icon: IconFacebook, bg: "bg-[#1877F2] hover:bg-[#1668d3] text-white" },
 ];
 
 export function SupportBanner({ toolName = "Tulz", onDismiss }: SupportBannerProps) {
@@ -142,65 +149,87 @@ export function SupportBanner({ toolName = "Tulz", onDismiss }: SupportBannerPro
     const displayName = slugToName(toolName);
 
     const handleCopy = async () => {
-        await navigator.clipboard.writeText(SITE_URL);
+        const toolUrl = getToolUrl(toolName);
+        await navigator.clipboard.writeText(toolUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     return (
-        <div className="relative rounded-xl border border-pink-200 dark:border-pink-900/50 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 p-4">
+        <div className="relative overflow-hidden rounded-2xl border bg-background text-card-foreground shadow-2xl">
+            {/* Background elements for flair */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+
             <button
                 onClick={handleDismiss}
-                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground transition-colors z-50"
                 aria-label="Dismiss"
             >
                 <X className="h-4 w-4" />
             </button>
 
-            <div className="flex items-start gap-3 pr-6">
-                <div className="shrink-0 p-2 rounded-lg bg-pink-100 dark:bg-pink-900/40">
-                    <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
+            <div className="p-6 sm:p-8 flex flex-col items-center text-center relative z-10">
+                <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900/40 dark:to-rose-900/40 border border-pink-200 dark:border-pink-800 shadow-sm mb-5">
+                    <Heart className="h-7 w-7 text-pink-500 fill-pink-500 animate-pulse" />
                 </div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">
-                        The <span className="text-primary">{displayName}</span> just saved you some time!
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        Share with your network — it takes 5 seconds and helps others discover free tools.
-                    </p>
 
-                    {/* Platform share buttons */}
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                        {PLATFORMS.map(({ id, label, bg }) => (
-                            <button
-                                key={id}
-                                onClick={() => window.open(buildShareUrl(id, shareText), "_blank", "noopener,noreferrer")}
-                                className={`h-7 px-2.5 rounded text-[11px] font-semibold transition-colors ${bg}`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                        {/* Copy link — covers Instagram + anywhere without a direct web share URL */}
+                <h3 className="text-xl sm:text-2xl font-bold mb-2">
+                    The <span className="text-primary">{displayName}</span> just saved you some time!
+                </h3>
+
+                <p className="text-sm text-muted-foreground mb-6 max-w-[90%]">
+                    Share with your network — it takes seconds and helps others discover free tools.
+                </p>
+
+                <div className="w-full grid grid-cols-2 gap-3 mb-6">
+                    {PLATFORMS.map(({ id, label, icon: Icon, bg }) => (
                         <button
-                            onClick={handleCopy}
-                            className="h-7 px-2.5 rounded text-[11px] font-semibold transition-colors bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center gap-1"
+                            key={id}
+                            onClick={() => window.open(buildShareUrl(id, shareText, toolName), "_blank", "noopener,noreferrer")}
+                            className={cn(
+                                "flex items-center justify-center gap-2.5 h-11 px-4 rounded-xl font-semibold transition-transform hover:scale-[1.02] active:scale-95 shadow-sm",
+                                bg
+                            )}
                         >
-                            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                            {copied ? "Copied!" : "Copy link"}
+                            <Icon className="w-5 h-5 shrink-0" />
+                            <span className="text-[13px] sm:text-sm">{label}</span>
                         </button>
+                    ))}
+                </div>
+
+                <div className="w-full flex flex-col gap-4">
+                    <button
+                        onClick={handleCopy}
+                        className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium transition-colors border border-border/50"
+                    >
+                        {copied ? (
+                            <>
+                                <Check className="h-4 w-4" /> Copied!
+                            </>
+                        ) : (
+                            <>
+                                <Copy className="h-4 w-4" /> Copy link
+                            </>
+                        )}
+                    </button>
+
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-muted"></div>
+                        <span className="shrink-0 px-3 text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            Or support us
+                        </span>
+                        <div className="flex-grow border-t border-muted"></div>
                     </div>
 
-                    {/* Ko-fi */}
-                    <div className="mt-2.5">
-                        <Button
-                            size="sm"
-                            className="h-8 text-xs bg-gradient-to-r from-orange-400 to-pink-500 hover:from-orange-500 hover:to-pink-600 text-white border-0"
-                            onClick={() => window.open("https://ko-fi.com/tulzhub", "_blank", "noopener,noreferrer")}
-                        >
-                            <Coffee className="h-3 w-3 mr-1.5" />
-                            Buy us a coffee
-                        </Button>
-                    </div>
+                    <Button
+                        size="lg"
+                        className="w-full h-12 text-base font-bold bg-gradient-to-r from-[#FF5E5B] to-[#ff4f4c] hover:opacity-90 text-white shadow-lg shadow-red-500/25 transition-transform hover:-translate-y-0.5 rounded-xl border border-[#ff4f4c]/50"
+                        onClick={() => window.open("https://ko-fi.com/tulzhub", "_blank", "noopener,noreferrer")}
+                    >
+                        <Coffee className="h-5 w-5 mr-2" />
+                        Buy us a coffee
+                    </Button>
                 </div>
             </div>
         </div>

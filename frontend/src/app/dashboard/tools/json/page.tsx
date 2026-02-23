@@ -44,10 +44,10 @@ import {
 } from "lucide-react";
 import { SupportButton } from "@/components/shared/support-button";
 import { useAuth } from "@/providers/auth-provider";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 export default function JsonFormatterPage() {
   const { user } = useAuth();
-  const isPro = user?.subscription_tier === "pro";
   const [activeTab, setActiveTab] = useState("format");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
@@ -316,7 +316,9 @@ export default function JsonFormatterPage() {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
                 <Braces className="h-6 w-6" />
               </div>
@@ -325,9 +327,15 @@ export default function JsonFormatterPage() {
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Format, minify, validate, and convert JSON/YAML instantly
             </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
+        </div>
+      </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {!isPro && <SupportButton size="sm" />}
+            <SupportButton size="sm" />
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Free Tool</span>

@@ -35,19 +35,18 @@ import {
   Layers,
   Lock,
 } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import { useAuth } from "@/providers/auth-provider";
 import type { ImageResponse } from "@/types";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function ImagePage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const { showProgress, setStatus, hideProgress } = useProgressModal();
   const [activeTab, setActiveTab] = useState("background");
@@ -83,8 +82,6 @@ export default function ImagePage() {
     enabled: !!isAuthenticated,
   });
 
-  const isPro = usageData?.tier === "pro" || usageData?.is_unlimited;
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
 
   const handleFileSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -154,10 +151,7 @@ export default function ImagePage() {
       return;
     }
 
-    if (!isPro) {
-      showUpgradeModal();
-      return;
-    }
+    // Pro check removed - all features free
 
     showProgress({ status: "uploading", fileName: `${selectedFiles.length} images` });
     const formData = new FormData();
@@ -226,7 +220,9 @@ export default function ImagePage() {
               Remove backgrounds, resize, crop, and convert image formats
             </p>
           </div>
-          <UsageBadge />
+          <SupportButton size="sm" />
+          <FreeBadge />
+          
         </div>
       </div>
 

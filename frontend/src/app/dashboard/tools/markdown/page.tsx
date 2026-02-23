@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { SupportButton } from "@/components/shared/support-button";
 import { useAuth } from "@/providers/auth-provider";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -77,7 +78,6 @@ function greet(name) {
 
 export default function MarkdownPdfPage() {
   const { user } = useAuth();
-  const isPro = user?.subscription_tier === "pro";
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [theme, setTheme] = useState("default");
@@ -203,16 +203,24 @@ export default function MarkdownPdfPage() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
               <FileText className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
               Markdown to PDF
             </h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Convert your Markdown documents to beautifully styled PDFs
             </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
+        </div>
+      </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {!isPro && <SupportButton size="sm" />}
+            <SupportButton size="sm" />
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Free - Unlimited</span>

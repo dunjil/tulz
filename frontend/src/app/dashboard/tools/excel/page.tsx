@@ -31,6 +31,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { ExcelResponse } from "@/types";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -38,7 +39,6 @@ type ConversionMode = "excel-to-csv" | "csv-to-excel";
 
 export default function ExcelPage() {
   const { user } = useAuth();
-  const isPro = user?.subscription_tier === "pro";
   const { showProgress, setStatus, hideProgress } = useProgressModal();
 
   const [mode, setMode] = useState<ConversionMode>("excel-to-csv");
@@ -191,14 +191,22 @@ export default function ExcelPage() {
             <Table className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Excel & CSV Converter</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-xl font-bold">Excel & CSV Converter</h1>
             <p className="text-xs text-muted-foreground hidden sm:block">
               Convert between Excel and CSV formats
             </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
+        </div>
+      </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!isPro && <SupportButton size="sm" />}
+          <SupportButton size="sm" />
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-medium">
             <Sparkles className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Free - </span>Unlimited

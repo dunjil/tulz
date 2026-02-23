@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api, apiHelpers, shouldShowErrorToast } from "@/lib/api";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import { useAuth } from "@/providers/auth-provider";
@@ -34,14 +33,14 @@ import {
   Loader2,
   FileText,
 } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function PDFProtectPage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const { showProgress, setStatus, hideProgress } = useProgressModal();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -59,7 +58,6 @@ export default function PDFProtectPage() {
     enabled: !!isAuthenticated,
   });
 
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
 
   const handleFileSelect = (files: File[]) => {
     setSelectedFiles(files.slice(0, 1));
@@ -134,7 +132,9 @@ export default function PDFProtectPage() {
               Add password protection to secure your PDF files
             </p>
           </div>
-          <UsageBadge />
+          <SupportButton size="sm" />
+          <FreeBadge />
+          
         </div>
       </div>
 

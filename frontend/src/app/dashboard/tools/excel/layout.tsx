@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     type: "website",
     url: `https://tulz.tools/tools/excel`,
   },
+  alternates: {
+    canonical: `https://tulz.tools/tools/excel`,
+  },
   twitter: {
     title: tool?.title || "Tulz - Free Online Tools",
     description: tool?.description || "Free online productivity tools.",

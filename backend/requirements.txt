@@ -66,6 +66,7 @@ httpx==0.28.1
 # Utilities
 python-dotenv==1.0.1
 aiofiles==24.1.0
+num2words==0.5.14
 markdown==3.7
 weasyprint==63.0
 pygments==2.18.0

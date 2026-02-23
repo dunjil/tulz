@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     type: "website",
     url: `https://tulz.tools/tools/markdown`,
   },
+  alternates: {
+    canonical: `https://tulz.tools/tools/markdown`,
+  },
   twitter: {
     title: tool?.title || "Tulz - Free Online Tools",
     description: tool?.description || "Free online productivity tools.",

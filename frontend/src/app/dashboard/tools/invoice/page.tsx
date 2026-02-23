@@ -2,11 +2,10 @@
 
 import { RelatedGuide } from "@/components/shared/related-guide";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api, apiHelpers, shouldShowErrorToast } from "@/lib/api";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
@@ -55,9 +54,13 @@ import {
   ChevronDown,
   Settings2,
   Sparkles,
+  Languages,
+  HelpCircle,
 } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
 import { SignaturePad } from "@/components/shared/signature-pad";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
+import { toWords } from "number-to-words";
 
 // Use relative URL for API calls
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -133,7 +136,6 @@ const colorPresets = ["#6b7280", "#dc2626", "#16a34a", "#2563eb", "#9333ea", "#e
 export default function InvoicePage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
 
   const { data: usageData } = useQuery({
@@ -145,9 +147,8 @@ export default function InvoicePage() {
     enabled: !!isAuthenticated,
   });
 
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
-
   // Invoice details
+  const [invoiceTitle, setInvoiceTitle] = useState("INVOICE");
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState("");
@@ -176,9 +177,16 @@ export default function InvoicePage() {
   const [primaryColor, setPrimaryColor] = useState("#3498db");
   const [showTax, setShowTax] = useState(true);
 
+  // Amount in Words
+  const [amountInWords, setAmountInWords] = useState("");
+  const [showAmountInWords, setShowAmountInWords] = useState(false);
+  const [isAmountInWordsManual, setIsAmountInWordsManual] = useState(false);
+
   // Signature
   const [signature, setSignature] = useState<string | null>(null);
+  const [clientSignature, setClientSignature] = useState<string | null>(null);
   const [showSignatureSection, setShowSignatureSection] = useState(false);
+  const [showClientSignatureSection, setShowClientSignatureSection] = useState(false);
   const [includeSignatureLines, setIncludeSignatureLines] = useState(true);
 
   // Watermark
@@ -201,6 +209,7 @@ export default function InvoicePage() {
   const [previewHtml, setPreviewHtml] = useState("");
 
   const getInvoiceData = () => ({
+    title: invoiceTitle,
     invoice_number: invoiceNumber,
     invoice_date: invoiceDate,
     due_date: dueDate || undefined,
@@ -235,7 +244,9 @@ export default function InvoicePage() {
     template: "modern",
     logo_url: logo || undefined,
     show_tax: showTax,
+    amount_in_words: showAmountInWords ? amountInWords : undefined,
     signature_data: signature || undefined,
+    client_signature_data: clientSignature || undefined,
     show_signature_section: includeSignatureLines,
     watermark: watermarkEnabled ? {
       enabled: true,
@@ -321,6 +332,39 @@ export default function InvoicePage() {
       }
     },
   });
+
+  // Calculate amount in words from total
+  useEffect(() => {
+    if (showAmountInWords && !isAmountInWordsManual) {
+      const total = calculateTotal();
+      if (total > 0) {
+        try {
+          const wholeAmount = Math.floor(total);
+          const decimalPart = Math.round((total - wholeAmount) * 100);
+
+          let words = toWords(wholeAmount);
+
+          if (decimalPart > 0) {
+            const decimalWords = toWords(decimalPart);
+            const currencyPlural = currency === "NGN" ? "Naira" : "Dollars";
+            const subunitPlural = currency === "NGN" ? "Kobo" : "Cents";
+
+            setAmountInWords(`${words} ${currencyPlural} and ${decimalWords} ${subunitPlural}`);
+          } else {
+            const currencyPlural = currency === "NGN" ? "Naira" : "Dollars";
+            setAmountInWords(`${words} ${currencyPlural} Only`);
+          }
+        } catch (e) {
+          console.error("Error generating amount in words:", e);
+        }
+      }
+    }
+  }, [items, showAmountInWords, isAmountInWordsManual, currency]);
+
+  const handleManualAmountInWordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAmountInWords(e.target.value);
+    setIsAmountInWordsManual(true);
+  };
 
   const processLogoFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -416,7 +460,7 @@ export default function InvoicePage() {
   return (
     <div className="max-w-3xl mx-auto px-1">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg">
             <Receipt className="h-5 w-5 text-white" />
@@ -428,12 +472,15 @@ export default function InvoicePage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadSample} className="h-8 text-xs">
-            <Sparkles className="h-3.5 w-3.5 mr-1" />
-            <span className="hidden sm:inline">Load </span>Sample
-          </Button>
-          <UsageBadge />
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={loadSample} className="h-9 text-xs">
+              <Sparkles className="h-3.5 w-3.5 mr-1" />
+              <span className="hidden sm:inline">Load </span>Sample
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -443,7 +490,35 @@ export default function InvoicePage() {
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-sm font-medium">Invoice Details</CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0">
+          <CardContent className="px-4 pb-4 pt-0 space-y-3">
+            {/* Document Type / Title */}
+            <div className="space-y-1">
+              <Label className="text-xs">Document Title</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={invoiceTitle}
+                  onChange={(e) => setInvoiceTitle(e.target.value.toUpperCase())}
+                  placeholder="INVOICE"
+                  className="h-9 flex-1"
+                />
+                <div className="flex gap-1">
+                  {["INVOICE", "PROFORMA INVOICE", "RECEIPT", "QUOTE"].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => setInvoiceTitle(preset)}
+                      className={cn(
+                        "px-2 py-1 text-[10px] rounded border transition-colors whitespace-nowrap",
+                        invoiceTitle === preset
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-muted-foreground/20 hover:border-primary/50 text-muted-foreground"
+                      )}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Invoice #</Label>
@@ -521,6 +596,23 @@ export default function InvoicePage() {
                     </SelectContent>
                   </Select>
                 )}
+              </div>
+              <div className="space-y-1 col-span-2">
+                <div className="flex items-center justify-between border-t pt-2 mt-1">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Languages className="h-3.5 w-3.5" />
+                    Amount in Words
+                  </Label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showAmountInWords}
+                      onChange={(e) => setShowAmountInWords(e.target.checked)}
+                      className="rounded h-3.5 w-3.5"
+                    />
+                    <span className="text-xs">Show section below</span>
+                  </label>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -615,8 +707,8 @@ export default function InvoicePage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                        value={item.quantity || ""}
+                        onChange={(e) => updateItem(index, "quantity", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                         className="h-8 text-center"
                       />
                     </div>
@@ -626,8 +718,8 @@ export default function InvoicePage() {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => updateItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                        value={item.unit_price || ""}
+                        onChange={(e) => updateItem(index, "unit_price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                         className="h-8"
                       />
                     </div>
@@ -639,8 +731,8 @@ export default function InvoicePage() {
                           min="0"
                           max="100"
                           step="0.1"
-                          value={item.tax_rate}
-                          onChange={(e) => updateItem(index, "tax_rate", parseFloat(e.target.value) || 0)}
+                          value={item.tax_rate || ""}
+                          onChange={(e) => updateItem(index, "tax_rate", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                           className="h-8"
                         />
                       </div>
@@ -660,18 +752,18 @@ export default function InvoicePage() {
                   <div className="w-44 space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>{displaySymbol}{calculateSubtotal().toFixed(2)}</span>
+                      <span>{displaySymbol}{calculateSubtotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                     {showTax && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Tax</span>
-                        <span>{displaySymbol}{calculateTax().toFixed(2)}</span>
+                        <span>{displaySymbol}{calculateTax().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-base border-t pt-1.5">
                       <span>Total</span>
                       <span className="text-primary">
-                        {displaySymbol}{(showTax ? calculateTotal() : calculateSubtotal()).toFixed(2)}
+                        {displaySymbol}{(showTax ? calculateTotal() : calculateSubtotal()).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -680,6 +772,46 @@ export default function InvoicePage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Amount in Words */}
+        {showAmountInWords && (
+          <Card className="mb-4">
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Languages className="h-4 w-4" />
+                  Amount in Words
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAmountInWords(false)}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0 space-y-2">
+              <Input
+                value={amountInWords}
+                onChange={handleManualAmountInWordsChange}
+                placeholder="e.g. One thousand dollars and fifty cents"
+                className="h-10 text-sm shadow-sm"
+              />
+              {isAmountInWordsManual && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setIsAmountInWordsManual(false); setAmountInWords(""); }}
+                  className="h-6 text-[10px] px-2"
+                >
+                  Restore auto-generation
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Notes */}
         <Card>
@@ -789,8 +921,9 @@ export default function InvoicePage() {
                   </div>
                 </div>
 
-                {/* Signature */}
-                <div className="space-y-2">
+
+                {/* Signature Section */}
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <PenTool className="h-3.5 w-3.5" />
@@ -804,7 +937,9 @@ export default function InvoicePage() {
                           setIncludeSignatureLines(e.target.checked);
                           if (!e.target.checked) {
                             setShowSignatureSection(false);
+                            setShowClientSignatureSection(false);
                             setSignature(null);
+                            setClientSignature(null);
                           }
                         }}
                         className="rounded h-3.5 w-3.5"
@@ -813,30 +948,60 @@ export default function InvoicePage() {
                     </label>
                   </div>
                   {includeSignatureLines && (
-                    <div className="space-y-2 pl-1">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={showSignatureSection}
-                          onChange={(e) => {
-                            setShowSignatureSection(e.target.checked);
-                            if (!e.target.checked) setSignature(null);
-                          }}
-                          className="rounded h-3 w-3"
-                        />
-                        <span className="text-xs">Add my signature now</span>
-                      </label>
-                      {showSignatureSection && (
-                        <div className="w-full max-w-[280px]">
-                          <SignaturePad
-                            onSignatureChange={setSignature}
-                            initialSignature={signature}
-                            width={280}
-                            height={100}
-                            className="w-full"
+                    <div className="space-y-4 pl-1">
+                      {/* Authorized Signature */}
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={showSignatureSection}
+                            onChange={(e) => {
+                              setShowSignatureSection(e.target.checked);
+                              if (!e.target.checked) setSignature(null);
+                            }}
+                            className="rounded h-3 w-3"
                           />
-                        </div>
-                      )}
+                          <span className="text-xs">Add authorized signature</span>
+                        </label>
+                        {showSignatureSection && (
+                          <div className="w-full max-w-[280px]">
+                            <SignaturePad
+                              onSignatureChange={setSignature}
+                              initialSignature={signature}
+                              width={280}
+                              height={100}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Client Signature */}
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={showClientSignatureSection}
+                            onChange={(e) => {
+                              setShowClientSignatureSection(e.target.checked);
+                              if (!e.target.checked) setClientSignature(null);
+                            }}
+                            className="rounded h-3 w-3"
+                          />
+                          <span className="text-xs">Add client signature</span>
+                        </label>
+                        {showClientSignatureSection && (
+                          <div className="w-full max-w-[280px]">
+                            <SignaturePad
+                              onSignatureChange={setClientSignature}
+                              initialSignature={clientSignature}
+                              width={280}
+                              height={100}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

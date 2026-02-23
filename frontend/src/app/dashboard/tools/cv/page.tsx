@@ -54,11 +54,11 @@ import {
   Check,
 } from "lucide-react";
 import { SupportButton } from "@/components/shared/support-button";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useAuth } from "@/providers/auth-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -76,9 +76,7 @@ export default function CvGeneratorPage() {
   const [pageCount, setPageCount] = useState(1);
   const A4_HEIGHT_PX = 297 * 3.7795; // 297mm in px at 96dpi
   const { user, isAuthenticated } = useAuth();
-  const isPro = user?.subscription_tier && ["pro", "premium", "unlimited"].includes(user.subscription_tier);
   const router = useRouter();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const [isCopied, setIsCopied] = useState(false);
 
@@ -209,7 +207,6 @@ export default function CvGeneratorPage() {
     onSuccess: (data) => {
       if (data.error) {
         if (data.requires_pro) {
-          showUpgradeModal();
         } else {
           toast.error(data.error);
         }
@@ -241,33 +238,22 @@ export default function CvGeneratorPage() {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
-              <User className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-              Markdown to CV
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Create professional CV/Resume PDFs from Markdown
-            </p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {!isPro && <SupportButton size="sm" />}
-            {isPro ? (
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>All Templates Unlocked</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>All Templates Free</span>
-              </div>
-            )}
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <User className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
+            Markdown to CV
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+            Create professional CV/Resume PDFs from Markdown
+          </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
         </div>
       </div>
+
 
       {/* Mobile View Tabs */}
       <div className="lg:hidden mb-6">
@@ -323,13 +309,12 @@ export default function CvGeneratorPage() {
                       </DialogHeader>
                       <div className="grid gap-3 mt-4">
                         {samples?.map((sample) => {
-                          const isLocked = !sample.is_free && !isPro;
+                          const isLocked = false;
                           return (
                             <button
                               key={sample.id}
                               onClick={() => {
                                 if (isLocked) {
-                                  showUpgradeModal();
                                   return;
                                 }
                                 loadSampleMutation.mutate(sample.id);

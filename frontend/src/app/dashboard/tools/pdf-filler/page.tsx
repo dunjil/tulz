@@ -6,7 +6,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api, apiHelpers, shouldShowErrorToast } from "@/lib/api";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import { useAuth } from "@/providers/auth-provider";
@@ -28,7 +27,8 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { FileDropzone } from "@/components/shared/file-dropzone";
-import { UsageBadge } from "@/components/shared/usage-badge";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 import {
   FileText,
   Download,
@@ -303,7 +303,6 @@ const dateFormats = [
 export default function PDFFillerPage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const { showProgress, setStatus, hideProgress } = useProgressModal();
 
@@ -317,7 +316,6 @@ export default function PDFFillerPage() {
     enabled: !!isAuthenticated,
   });
 
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
 
   // File state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -2730,10 +2728,18 @@ export default function PDFFillerPage() {
           <div className={cn("flex items-center gap-3", pdfDoc && "hidden md:flex")}>
             <FileText className="h-6 w-6 text-primary" />
             <div>
-              <h1 className="text-lg font-semibold">PDF Filler</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-lg font-semibold">PDF Filler</h1>
               <p className="text-xs text-muted-foreground">
                 Fill, sign, and annotate PDFs
               </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
+        </div>
+      </div>
             </div>
           </div>
           <div className="flex items-center gap-3">

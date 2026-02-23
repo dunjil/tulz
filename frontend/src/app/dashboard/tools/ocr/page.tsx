@@ -41,11 +41,11 @@ import {
   Clock,
   FileWarning,
 } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import { useAuth } from "@/providers/auth-provider";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -130,7 +130,6 @@ interface OCRResult {
 export default function OCRPage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const { showProgress, setStatus, hideProgress } = useProgressModal();
 
@@ -151,8 +150,6 @@ export default function OCRPage() {
     enabled: !!isAuthenticated,
   });
 
-  const isPro = usageData?.tier === "pro" || usageData?.is_unlimited;
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
 
   const activeOperation = ocrOperations.find((op) => op.id === activeTab) || ocrOperations[0];
 
@@ -257,7 +254,9 @@ export default function OCRPage() {
             Extract text from images and scanned documents
           </p>
         </div>
-        <UsageBadge />
+        <SupportButton size="sm" />
+          <FreeBadge />
+          
       </div>
 
       {/* Limitations Notice */}
@@ -318,7 +317,7 @@ export default function OCRPage() {
                 onFilesSelected={handleFileSelect}
                 accept={activeOperation.accepts}
                 maxFiles={1}
-                maxSize={isPro ? 10 * 1024 * 1024 : 2 * 1024 * 1024}
+                maxSize={10 * 1024 * 1024}
               />
 
               {/* Selected File Info */}
@@ -360,13 +359,11 @@ export default function OCRPage() {
                       <SelectItem
                         key={lang.code}
                         value={lang.code}
-                        disabled={!isPro && lang.code !== "eng"}
+                        disabled={false}
                       >
                         <div className="flex items-center justify-between w-full">
                           <span>{lang.name}</span>
-                          {!isPro && lang.code !== "eng" && (
-                            <Crown className="h-3 w-3 text-yellow-500 ml-2" />
-                          )}
+                          
                         </div>
                       </SelectItem>
                     ))}
@@ -378,17 +375,17 @@ export default function OCRPage() {
               <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Max file size:</span>
-                  <span className="font-medium">{isPro ? "10 MB" : "2 MB"}</span>
+                  <span className="font-medium">{"10 MB"}</span>
                 </div>
                 {(activeTab === "pdf-to-text" || activeTab === "pdf-to-searchable" || activeTab === "to-word") && (
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Max pages:</span>
-                    <span className="font-medium">{isPro ? "20 pages" : "1 page"}</span>
+                    <span className="font-medium">{"20 pages"}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Languages:</span>
-                  <span className="font-medium">{isPro ? "15+" : "English only"}</span>
+                  <span className="font-medium">{"15+"}</span>
                 </div>
               </div>
 

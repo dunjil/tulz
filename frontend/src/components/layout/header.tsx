@@ -4,10 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/providers/auth-provider";
-import { Button } from "@/components/ui/button";
-import { UsageBadge } from "@/components/shared/usage-badge";
-import { Moon, Sun, Menu, Heart, HelpCircle, BookOpen } from "lucide-react";
+import { Moon, Sun, Menu, Heart, HelpCircle, BookOpen, X } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -72,7 +71,6 @@ export function Header() {
             {/* Auth buttons / User menu */}
             {isAuthenticated ? (
               <>
-                <UsageBadge className="hidden lg:flex" />
                 <Link href="/dashboard/settings" className="hidden lg:block">
                   <button className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                     Settings
@@ -93,7 +91,7 @@ export function Header() {
               className="lg:hidden flex items-center justify-center w-9 h-9 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Toggle menu"
             >
-              <Menu className="h-5 w-5" />
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
@@ -148,26 +146,14 @@ export function Header() {
                 {theme === "dark" ? "Light Mode" : "Dark Mode"}
               </button>
 
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/dashboard/settings"
-                    className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Settings
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/register"
-                    className="mx-4 my-2 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors text-center"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Get Started
-                  </Link>
-                </>
+              {isAuthenticated && (
+                <Link
+                  href="/dashboard/settings"
+                  className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Settings
+                </Link>
               )}
             </nav>
           </div>

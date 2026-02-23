@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/card";
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { Maximize, Download, Image as ImageIcon, RefreshCcw, Lock, LockOpen } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import type { ImageResponse } from "@/types";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -153,7 +154,9 @@ export default function ImageResizePage() {
                             Resize images to custom dimensions
                         </p>
                     </div>
-                    <UsageBadge />
+                    <SupportButton size="sm" />
+          <FreeBadge />
+          
                 </div>
             </div>
 

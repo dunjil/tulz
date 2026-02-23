@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/card";
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { Maximize, Download, Image as ImageIcon, Check, RefreshCw, Twitter } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import type { ImageResponse } from "@/types";
 import { ImageCropper } from "@/components/tools/social-media/image-cropper";
 import { PlatformPreview } from "@/components/tools/social-media/platform-preview";
 import getCroppedImg from "@/lib/canvas-utils";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -120,7 +121,9 @@ export default function TwitterResizerPage() {
                         Create perfectly sized banners (1500x500)
                     </p>
                 </div>
-                <UsageBadge />
+                <SupportButton size="sm" />
+          <FreeBadge />
+          
             </div>
 
             {!originalImage ? (

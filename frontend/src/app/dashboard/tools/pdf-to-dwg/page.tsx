@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { RelatedGuide } from "@/components/shared/related-guide";
 import { api, apiHelpers, shouldShowErrorToast } from "@/lib/api";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import { useAuth } from "@/providers/auth-provider";
@@ -30,7 +29,8 @@ import {
     Layers,
     FileInput,
 } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -112,7 +112,7 @@ export default function PDFToDWGPage() {
                             Convert PDF vector graphics into editable DXF (DWG compatible) CAD files
                         </p>
                     </div>
-                    <UsageBadge />
+                    
                 </div>
             </div>
 

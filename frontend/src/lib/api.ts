@@ -1,13 +1,8 @@
 import axios from "axios";
 import Cookies from "js-cookie";
-import { getShowUpgradeModal } from "@/components/shared/upgrade-modal";
 
-// Helper to check if an error should show a toast (not a 402 usage limit error)
+// Helper to check if an error should show a toast
 export function shouldShowErrorToast(error: any): boolean {
-  // Don't show toast for 402 errors - the upgrade modal handles these
-  if (error?.response?.status === 402) {
-    return false;
-  }
   // Don't show toast if explicitly marked as handled
   if (error?.handled) {
     return false;

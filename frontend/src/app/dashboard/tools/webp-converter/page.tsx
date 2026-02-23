@@ -25,9 +25,10 @@ import {
 } from "@/components/ui/select";
 import { FileDropzone } from "@/components/shared/file-dropzone";
 import { FileOutput, Download, Image as ImageIcon } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import type { ImageResponse } from "@/types";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -102,7 +103,9 @@ export default function ImageCompressPage() {
                             Optimize your website with high-performance WebP images
                         </p>
                     </div>
-                    <UsageBadge />
+                    <SupportButton size="sm" />
+          <FreeBadge />
+          
                 </div>
             </div>
 

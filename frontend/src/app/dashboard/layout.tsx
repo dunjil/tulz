@@ -4,7 +4,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { Header } from "@/components/layout/header";
 import { GoogleAdBanner } from "@/components/shared/google-ad";
 import { SupportBanner } from "@/components/shared/support-banner";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function DashboardLayout({
   children,
@@ -15,7 +15,12 @@ export default function DashboardLayout({
   const [showSupport, setShowSupport] = useState(false);
   const [bannerToolName, setBannerToolName] = useState("Tulz");
 
-  // Global listener: show support banner once per session after any download
+  // Use a ref instead of sessionStorage so it resets on page refresh / tab reopen.
+  // This means the share modal shows once after the first download per page load,
+  // but doesn't persist annoyingly across refreshes.
+  const hasShownRef = useRef(false);
+
+  // Global listener: show support/share banner after any download (once per page load)
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -23,17 +28,37 @@ export default function DashboardLayout({
       if (
         clickable &&
         clickable.textContent?.toLowerCase().match(/(download|save|export|get pdf|get file)/) &&
-        !sessionStorage.getItem("support_shown")
+        !hasShownRef.current
       ) {
         // Extract tool slug from URL, e.g. /tools/pdf-merge → "pdf-merge"
         const slug = window.location.pathname.split("/").filter(Boolean).pop() || "Tulz";
         setBannerToolName(slug);
-        setShowSupport(true);
-        sessionStorage.setItem("support_shown", "true");
+        // Small delay so the download starts first
+        setTimeout(() => {
+          setShowSupport(true);
+          hasShownRef.current = true;
+        }, 1500);
       }
     };
+
+    const handleCustomDownload = () => {
+      if (!hasShownRef.current) {
+        const slug = window.location.pathname.split("/").filter(Boolean).pop() || "Tulz";
+        setBannerToolName(slug);
+        setTimeout(() => {
+          setShowSupport(true);
+          hasShownRef.current = true;
+        }, 1500);
+      }
+    };
+
     document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
+    document.addEventListener("tool-download", handleCustomDownload as EventListener);
+
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("tool-download", handleCustomDownload as EventListener);
+    };
   }, []);
 
   if (isLoading) {
@@ -67,8 +92,14 @@ export default function DashboardLayout({
 
       {/* Support Banner — centered modal overlay after download */}
       {showSupport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowSupport(false)}
+        >
+          <div
+            className="w-full max-w-md animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
             <SupportBanner toolName={bannerToolName} onDismiss={() => setShowSupport(false)} />
           </div>
         </div>

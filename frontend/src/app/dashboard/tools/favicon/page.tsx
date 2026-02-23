@@ -21,6 +21,7 @@ import { FileDropzone } from "@/components/shared/file-dropzone";
 import { SupportButton } from "@/components/shared/support-button";
 import { useProgressModal } from "@/components/shared/progress-modal";
 import { useAuth } from "@/providers/auth-provider";
+import { FreeBadge } from "@/components/shared/free-badge";
 import {
   Globe,
   Download,
@@ -49,7 +50,6 @@ interface FaviconResponse {
 
 export default function FaviconPage() {
   const { user } = useAuth();
-  const isPro = user?.subscription_tier === "pro";
   const { showProgress, setStatus, hideProgress } = useProgressModal();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -141,16 +141,24 @@ export default function FaviconPage() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
               <Globe className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
               Favicon Generator
             </h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Generate all favicon sizes for your website from a single image
             </p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <SupportButton size="sm" />
+          <FreeBadge />
+        </div>
+      </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {!isPro && <SupportButton size="sm" />}
+            <SupportButton size="sm" />
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs sm:text-sm font-medium">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Free - Unlimited</span>

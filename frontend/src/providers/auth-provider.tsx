@@ -58,8 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const response = await api.get("/users/me");
-      setUser(response.data);
-      return response.data;
+      const userData = response.data;
+      if (userData) {
+        userData.subscription_tier = "unlimited";
+        userData.daily_uses_remaining = 999;
+      }
+      setUser(userData);
+      return userData;
     } catch (error) {
       // Token invalid, try refresh
       const refreshToken = Cookies.get("refresh_token");
@@ -78,8 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             expires: 7,
           });
           const userResponse = await api.get("/users/me");
-          setUser(userResponse.data);
-          return userResponse.data;
+          const userData = userResponse.data;
+          if (userData) {
+            userData.subscription_tier = "unlimited";
+            userData.daily_uses_remaining = 999;
+          }
+          setUser(userData);
+          return userData;
         } catch {
           Cookies.remove("access_token");
           Cookies.remove("refresh_token");

@@ -6,7 +6,6 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { apiHelpers, shouldShowErrorToast } from "@/lib/api";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { base64ToBlob, downloadBlob, cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
@@ -42,8 +41,9 @@ import {
   Crown,
 } from "lucide-react";
 // import { CoffeePopup } from "@/components/shared/coffee-popup";
-import { UsageBadge } from "@/components/shared/usage-badge";
 import type { QRCodeRequest, QRCodeResponse, QRCodeType } from "@/types";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 
 // QR Code type configuration
@@ -58,7 +58,6 @@ const qrTypes = [
 export default function QRCodePage() {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const [qrType, setQrType] = useState<QRCodeType>("url");
   const [content, setContent] = useState("");
@@ -79,7 +78,6 @@ export default function QRCodePage() {
     enabled: !!isAuthenticated,
   });
 
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
 
   // WiFi specific
   const [wifiSsid, setWifiSsid] = useState("");
@@ -223,7 +221,9 @@ export default function QRCodePage() {
               </p>
             </div>
           </div>
-          <UsageBadge />
+          <SupportButton size="sm" />
+          <FreeBadge />
+          
         </div>
       </div>
 

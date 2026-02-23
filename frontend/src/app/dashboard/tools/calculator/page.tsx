@@ -27,10 +27,10 @@ import { SupportButton } from "@/components/shared/support-button";
 import { useAuth } from "@/providers/auth-provider";
 import type { CalculatorResponse } from "@/types";
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 export default function CalculatorPage() {
   const { user } = useAuth();
-  const isPro = user?.subscription_tier === "pro";
   const [activeTab, setActiveTab] = useState("scientific");
 
   // Scientific
@@ -135,7 +135,7 @@ export default function CalculatorPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
               <Calculator className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
@@ -146,14 +146,12 @@ export default function CalculatorPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {!isPro && <SupportButton size="sm" />}
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Free - Unlimited</span>
-            </div>
+            <SupportButton size="sm" />
+            <FreeBadge />
           </div>
         </div>
       </div>
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-3 w-full max-w-md">

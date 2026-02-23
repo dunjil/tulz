@@ -42,11 +42,11 @@ import {
   Crown,
   Lock,
 } from "lucide-react";
-import { UsageBadge } from "@/components/shared/usage-badge";
-import { useUpgradeModal } from "@/components/shared/upgrade-modal";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useAuth } from "@/providers/auth-provider";
 import Link from "next/link";
+import { SupportButton } from "@/components/shared/support-button";
+import { FreeBadge } from "@/components/shared/free-badge";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -79,7 +79,6 @@ const paperSizes = [
 export default function WebPdfPage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { showUpgradeModal } = useUpgradeModal();
   const { showLoginModal } = useLoginModal();
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<ConvertResponse | null>(null);
@@ -108,8 +107,6 @@ export default function WebPdfPage() {
     enabled: !!isAuthenticated,
   });
 
-  const isPro = usageData?.tier === "pro" || usageData?.is_unlimited;
-  const hasRemainingUses = usageData?.remaining > 0 || usageData?.is_unlimited;
 
   const convertMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -233,7 +230,9 @@ export default function WebPdfPage() {
               </p>
             </div>
           </div>
-          <UsageBadge />
+          <SupportButton size="sm" />
+          <FreeBadge />
+          
         </div>
       </div>
 
