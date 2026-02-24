@@ -137,8 +137,8 @@ def process_pdf_compress(
         writer = PdfWriter()
 
         for page in reader.pages:
-            page.compress_content_streams()
-            writer.add_page(page)
+            p = writer.add_page(page)
+            p.compress_content_streams()
 
         # Set compression parameters based on level
         if compression_level == "high":

@@ -101,8 +101,8 @@ class PDFService:
             writer = PdfWriter()
 
             for page in reader.pages:
-                page.compress_content_streams()
-                writer.add_page(page)
+                p = writer.add_page(page)
+                p.compress_content_streams()
 
             # Remove duplication and compress
             writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)
