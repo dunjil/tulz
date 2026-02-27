@@ -272,8 +272,8 @@ async def get_country_stats(
 
     countries = [
         {
-            "country_code": row.country_code,
-            "country_name": row.country_name,
+            "country_code": row.country_code if row.country_code else "unknown",
+            "country_name": row.country_name if row.country_name else "Unknown Location",
             "total_uses": row.total_uses,
             "unique_users": row.unique_users,
             "unique_ips": row.unique_ips,
