@@ -100,8 +100,8 @@ interface MostUsedTools {
 }
 
 // Helper function to get flag emoji from country code
-function getFlagEmoji(countryCode: string): string {
-  if (!countryCode || countryCode.length !== 2) return "🌍";
+function getFlagEmoji(countryCode: string | null | undefined): string {
+  if (!countryCode || typeof countryCode !== "string" || countryCode.length !== 2) return "🌍";
   const codePoints = countryCode
     .toUpperCase()
     .split("")
@@ -378,16 +378,16 @@ export default function AdminAnalyticsPage() {
                           .sort(([, a], [, b]) => b - a)[0]
                         : null;
                       return (
-                        <TableRow key={country.country_code}>
+                        <TableRow key={country.country_code || "unknown"}>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="text-lg">
                                 {getFlagEmoji(country.country_code)}
                               </span>
                               <div>
-                                <p className="font-medium">{country.country_name}</p>
+                                <p className="font-medium">{country.country_name || "Unknown Location"}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {country.country_code}
+                                  {country.country_code || "N/A"}
                                 </p>
                               </div>
                             </div>
