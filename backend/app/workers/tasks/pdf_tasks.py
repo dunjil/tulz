@@ -186,20 +186,28 @@ def process_pdf_to_word(self, file_path: str, output_dir: str) -> dict:
         dict with converted file info
     """
     try:
-        from pdf2docx import Converter
+        from app.services.tools.pdf_service import PDFService
+        import asyncio
 
         output_filename = f"converted_{uuid.uuid4().hex[:8]}.docx"
         output_path = os.path.join(output_dir, output_filename)
 
-        cv = Converter(file_path)
-        cv.convert(output_path)
-        cv.close()
+        with open(file_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        pdf_service = PDFService()
+        # Since this is a synchronous Celery task, run the async function using asyncio
+        docx_bytes, total_pages = asyncio.run(pdf_service.to_word(pdf_bytes))
+
+        with open(output_path, "wb") as f:
+            f.write(docx_bytes)
 
         return {
             "success": True,
             "filename": output_filename,
             "path": output_path,
             "size": os.path.getsize(output_path),
+            "pages": total_pages,
         }
 
     except Exception as e:

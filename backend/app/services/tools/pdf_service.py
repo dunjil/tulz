@@ -190,9 +190,42 @@ class PDFService:
         except Exception:
             return None
 
+    def _pdf_has_text(self, pdf_bytes: bytes) -> bool:
+        """Check if PDF has selectable text (i.e. not just scanned images)."""
+        try:
+            import fitz
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            # Check up to first 5 pages
+            has_text = False
+            for i in range(min(5, len(doc))):
+                if doc[i].get_text("text").strip():
+                    has_text = True
+                    break
+            doc.close()
+            return has_text
+        except Exception:
+            return True # Fallback to true to avoid unnecessary OCR if check fails
+
     async def to_word(self, pdf_bytes: bytes) -> Tuple[bytes, int]:
         """Convert PDF to Word document."""
         import asyncio
+        import logging
+
+        # 1. Option 1: Apply OCR if scanned
+        is_scanned = not self._pdf_has_text(pdf_bytes)
+        if is_scanned:
+            try:
+                from app.services.tools.ocr_service import OCRService
+                ocr_service = OCRService()
+                # Use 'pro' tier to allow larger files and preprocessing
+                ocr_result = await ocr_service.create_searchable_pdf(pdf_bytes, language="eng", tier="pro")
+                if ocr_result.get("success") and os.path.exists(ocr_result.get("output_path", "")):
+                    with open(ocr_result["output_path"], "rb") as f:
+                        pdf_bytes = f.read()
+                    os.unlink(ocr_result["output_path"])
+                    logging.getLogger(__name__).info("Successfully applied OCR to scanned PDF before Word conversion.")
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"OCR preprocessing failed, continuing without OCR: {str(e)}")
 
         # pdf2docx requires file paths, so use temp files
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_file:
@@ -210,8 +243,9 @@ class PDFService:
             )
 
             if not success or not os.path.exists(docx_path):
+                # Option 3: Better error message instead of returning a garbage document
                 raise FileProcessingError(
-                    message="PDF conversion failed. The PDF may be corrupted or use unsupported features."
+                    message="PDF conversion failed. The document layout is too complex or uses an unsupported format."
                 )
 
             # Read result
@@ -238,69 +272,20 @@ class PDFService:
                 os.unlink(docx_path)
 
     def _convert_pdf_to_docx(self, pdf_path: str, docx_path: str) -> bool:
-        """Synchronous PDF to DOCX conversion with fallback."""
-        # Try pdf2docx first
+        """Synchronous PDF to DOCX conversion."""
+        # Try pdf2docx
         try:
             from pdf2docx import Converter
             cv = Converter(pdf_path)
+            # Default convert has problems with some tables, but we will leave defaults for now
             cv.convert(docx_path)
             cv.close()
             return True
-        except Exception:
-            pass
-
-        # Fallback: Use pymupdf to extract text and create a simple docx
-        try:
-            import fitz
-            from docx import Document
-            from docx.shared import Pt, Inches
-
-            doc = fitz.open(pdf_path)
-            word_doc = Document()
-
-            for page_num in range(len(doc)):
-                page = doc[page_num]
-
-                # Add page break between pages (except first)
-                if page_num > 0:
-                    word_doc.add_page_break()
-
-                # Extract text blocks
-                blocks = page.get_text("blocks")
-
-                for block in blocks:
-                    if block[6] == 0:  # Text block
-                        text = block[4].strip()
-                        if text:
-                            para = word_doc.add_paragraph(text)
-                            para.style.font.size = Pt(11)
-
-                # Extract images
-                images = page.get_images()
-                for img_index, img in enumerate(images):
-                    try:
-                        xref = img[0]
-                        base_image = doc.extract_image(xref)
-                        image_bytes = base_image["image"]
-
-                        # Save image temporarily
-                        img_path = f"{pdf_path}_img_{page_num}_{img_index}.{base_image['ext']}"
-                        with open(img_path, "wb") as img_file:
-                            img_file.write(image_bytes)
-
-                        # Add to document
-                        word_doc.add_picture(img_path, width=Inches(5))
-
-                        # Cleanup
-                        os.unlink(img_path)
-                    except Exception:
-                        continue
-
-            doc.close()
-            word_doc.save(docx_path)
-            return True
-
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"pdf2docx conversion failed: {str(e)}")
+            # Option 3: We no longer fallback to pymupdf's silent layout destruction.
+            # We return False so that `to_word` can raise a proper FileProcessingError.
             return False
 
     def _parse_page_ranges(self, ranges_str: str, total_pages: int) -> list[list[int]]:
@@ -1382,16 +1367,25 @@ class PDFService:
     def _convert_office_with_libreoffice(self, input_path: str, output_path: str) -> bool:
         """Convert Office files (DOCX, XLSX, PPTX) to PDF using LibreOffice headless."""
         import subprocess
+        import tempfile
+        import shutil
 
+        # Generate a unique profile directory to avoid lock file conflicts
+        # when running concurrently or via celery workers.
+        user_prof = tempfile.mkdtemp(prefix="libreoffice_prof_")
+        
         try:
             # Get directory containing the input file
             input_dir = os.path.dirname(input_path)
 
-            # Run LibreOffice in headless mode
+            # Run LibreOffice in headless mode with isolated user profile
             result = subprocess.run(
                 [
                     "libreoffice",
+                    f"-env:UserInstallation=file://{user_prof}",
                     "--headless",
+                    "--nologo",
+                    "--nofirststartwizard",
                     "--convert-to",
                     "pdf",
                     "--outdir",
@@ -1404,8 +1398,15 @@ class PDFService:
 
             return result.returncode == 0
 
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"LibreOffice conversion failed: {str(e)}")
             return False
+            
+        finally:
+            # Always clean up the temporary isolated profile
+            if os.path.exists(user_prof):
+                shutil.rmtree(user_prof, ignore_errors=True)
     async def to_excel(self, pdf_bytes: bytes) -> Tuple[bytes, int]:
         """
         Convert PDF to Excel (XLSX) with Ultra-Fidelity (Gold Standard).
