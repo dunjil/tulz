@@ -277,8 +277,8 @@ class PDFService:
         try:
             from pdf2docx import Converter
             cv = Converter(pdf_path)
-            # Default convert has problems with some tables, but we will leave defaults for now
-            cv.convert(docx_path)
+            # Use ocr=2 for advanced layout analysis (fewer unintended tables/fragmentation)
+            cv.convert(docx_path, ocr=2)
             cv.close()
             return True
         except Exception as e:
