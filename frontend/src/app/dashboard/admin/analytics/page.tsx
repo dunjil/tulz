@@ -373,12 +373,13 @@ export default function AdminAnalyticsPage() {
                   </TableHeader>
                   <TableBody>
                     {countryStats.countries.slice(0, 20).map((country) => {
-                      const topTool = countryStats.tool_by_country[country.country_code]
-                        ? Object.entries(countryStats.tool_by_country[country.country_code])
+                      const countryCode = country.country_code || "unknown";
+                      const topTool = countryStats.tool_by_country && countryStats.tool_by_country[countryCode]
+                        ? Object.entries(countryStats.tool_by_country[countryCode])
                           .sort(([, a], [, b]) => b - a)[0]
                         : null;
                       return (
-                        <TableRow key={country.country_code || "unknown"}>
+                        <TableRow key={countryCode}>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="text-lg">
