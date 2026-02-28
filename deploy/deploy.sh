@@ -228,7 +228,7 @@ if [ "$FIRST_TIME" = true ]; then
         curl wget git build-essential software-properties-common \
         ufw fail2ban nginx certbot python3-certbot-nginx \
         libpq-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libpng-dev \
-        poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript \
+        poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript libreoffice \
         libjemalloc2 \
         libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libopenjp2-7-dev libsecret-1-dev libxml2-dev libxslt1-dev \
         libgvpr2 libgbm1 libasound2 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
@@ -271,10 +271,10 @@ fi
 
 # Ensure critical Python tools exist (non-first time check)
 ensure_python_tools() {
-    log "Ensuring critical Python tools (pip, distutils) are installed..."
+    log "Ensuring critical Python and system tools are installed..."
     # On current Ubuntu, python3-pip and python3-venv are essential
     apt-get update -qq
-    apt-get install -y python3-pip python3-venv python3-setuptools || warn "Failed to install some python tools"
+    apt-get install -y python3-pip python3-venv python3-setuptools libreoffice || warn "Failed to install some tools"
     
     # Ensure LibreDWG is installed on existing installations too
     if ! command -v dwg2dxf >/dev/null; then

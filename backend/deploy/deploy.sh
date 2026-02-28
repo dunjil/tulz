@@ -99,6 +99,7 @@ if [ "$FIRST_TIME" = true ]; then
         tesseract-ocr-tur \
         tesseract-ocr-vie \
         ghostscript \
+        libreoffice \
         unpaper \
         pngquant
 

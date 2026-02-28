@@ -73,6 +73,7 @@ apt-get install -y \
     tesseract-ocr-tur \
     tesseract-ocr-vie \
     ghostscript \
+    libreoffice \
     unpaper \
     pngquant \
     poppler-utils \
