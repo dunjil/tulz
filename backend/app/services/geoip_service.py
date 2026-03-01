@@ -36,18 +36,18 @@ class GeoIPService:
             return cls._cache[ip_address]
 
         try:
-            # Use ip-api.com (free, 45 requests/minute)
+            # Use geojs.io (free, unlimited requests)
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(
-                    f"http://ip-api.com/json/{ip_address}",
-                    params={"fields": "status,country,countryCode"}
+                    f"https://get.geojs.io/v1/ip/country/{ip_address}.json"
                 )
 
                 if response.status_code == 200:
                     data = response.json()
-                    if data.get("status") == "success":
-                        country_code = data.get("countryCode")
-                        country_name = data.get("country")
+                    country_code = data.get("country")
+                    country_name = data.get("name")
+                    
+                    if country_code and country_name:
                         # Cache the result
                         cls._cache[ip_address] = (country_code, country_name)
                         # Limit cache size

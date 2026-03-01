@@ -890,9 +890,10 @@ class PDFService:
         import asyncio
 
         # Check if LibreOffice is available
-        if not shutil.which("libreoffice"):
+        libreoffice_bin = self._get_libreoffice_bin()
+        if not libreoffice_bin:
             raise FileProcessingError(
-                message="LibreOffice is not installed. Word to PDF conversion requires LibreOffice."
+                message="LibreOffice is not installed or not found in PATH. Word to PDF conversion requires LibreOffice. Please contact support or check server configuration."
             )
 
         with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as docx_file:
@@ -906,7 +907,7 @@ class PDFService:
             loop = asyncio.get_event_loop()
             success = await loop.run_in_executor(
                 _executor,
-                lambda: self._convert_docx_with_libreoffice(docx_path, pdf_path)
+                lambda: self._convert_docx_with_libreoffice(docx_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
@@ -931,7 +932,7 @@ class PDFService:
             if os.path.exists(pdf_path):
                 os.unlink(pdf_path)
 
-    def _convert_docx_with_libreoffice(self, docx_path: str, pdf_path: str) -> bool:
+    def _convert_docx_with_libreoffice(self, docx_path: str, pdf_path: str, libreoffice_bin: str = "libreoffice") -> bool:
         """Convert DOCX to PDF using LibreOffice headless."""
         import subprocess
 
@@ -942,7 +943,7 @@ class PDFService:
             # Run LibreOffice in headless mode
             result = subprocess.run(
                 [
-                    "libreoffice",
+                    libreoffice_bin,
                     "--headless",
                     "--convert-to",
                     "pdf",
@@ -1269,9 +1270,10 @@ class PDFService:
         import asyncio
 
         # Check if LibreOffice is available
-        if not shutil.which("libreoffice"):
+        libreoffice_bin = self._get_libreoffice_bin()
+        if not libreoffice_bin:
             raise FileProcessingError(
-                message="LibreOffice is not installed. Excel to PDF conversion requires LibreOffice."
+                message="LibreOffice is not installed or not found in PATH. Excel to PDF conversion requires LibreOffice. Please contact support or check server configuration."
             )
 
         with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as excel_file:
@@ -1284,7 +1286,7 @@ class PDFService:
             # Run LibreOffice conversion in thread pool
             loop = asyncio.get_event_loop()
             success = await loop.run_in_executor(
-                _executor, lambda: self._convert_office_with_libreoffice(excel_path, pdf_path)
+                _executor, lambda: self._convert_office_with_libreoffice(excel_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
@@ -1324,9 +1326,10 @@ class PDFService:
         import asyncio
 
         # Check if LibreOffice is available
-        if not shutil.which("libreoffice"):
+        libreoffice_bin = self._get_libreoffice_bin()
+        if not libreoffice_bin:
             raise FileProcessingError(
-                message="LibreOffice is not installed. PowerPoint to PDF conversion requires LibreOffice."
+                message="LibreOffice is not installed or not found in PATH. PowerPoint to PDF conversion requires LibreOffice. Please contact support or check server configuration."
             )
 
         with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as pptx_file:
@@ -1339,7 +1342,7 @@ class PDFService:
             # Run LibreOffice conversion in thread pool
             loop = asyncio.get_event_loop()
             success = await loop.run_in_executor(
-                _executor, lambda: self._convert_office_with_libreoffice(pptx_path, pdf_path)
+                _executor, lambda: self._convert_office_with_libreoffice(pptx_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
@@ -1364,7 +1367,7 @@ class PDFService:
             if os.path.exists(pdf_path):
                 os.unlink(pdf_path)
 
-    def _convert_office_with_libreoffice(self, input_path: str, output_path: str) -> bool:
+    def _convert_office_with_libreoffice(self, input_path: str, output_path: str, libreoffice_bin: str = "libreoffice") -> bool:
         """Convert Office files (DOCX, XLSX, PPTX) to PDF using LibreOffice headless."""
         import subprocess
         import tempfile
@@ -1381,7 +1384,7 @@ class PDFService:
             # Run LibreOffice in headless mode with isolated user profile
             result = subprocess.run(
                 [
-                    "libreoffice",
+                    libreoffice_bin,
                     f"-env:UserInstallation=file://{user_prof}",
                     "--headless",
                     "--nologo",
@@ -1407,6 +1410,16 @@ class PDFService:
             # Always clean up the temporary isolated profile
             if os.path.exists(user_prof):
                 shutil.rmtree(user_prof, ignore_errors=True)
+
+    def _get_libreoffice_bin(self) -> str | None:
+        """Find the LibreOffice or soffice binary in PATH."""
+        import shutil
+        for bin_name in ["libreoffice", "soffice"]:
+            p = shutil.which(bin_name)
+            if p:
+                return bin_name
+        return None
+
     async def to_excel(self, pdf_bytes: bytes) -> Tuple[bytes, int]:
         """
         Convert PDF to Excel (XLSX) with Ultra-Fidelity (Gold Standard).
