@@ -163,10 +163,10 @@ deep_malware_hunt() {
     log "[START] deep_malware_hunt"
     log "Searching for malware persistence in system folders..."
     # Check systemd for suspicious services
-    grep -rliE "kok|x86_64" /etc/systemd/system /lib/systemd/system /etc/cron* /etc/rc.local /etc/init.d 2>/dev/null || true
+    grep -rliE "\.kok|logic\.sh" /etc/systemd/system /lib/systemd/system /etc/cron* /etc/rc.local /etc/init.d 2>/dev/null || true
     
     # Check for suspicious files in /etc
-    find /etc -name "*.kok" -o -name "x86_64*" 2>/dev/null || true
+    find /etc -name "*.kok" 2>/dev/null || true
 
     # Look for hidden miners/scripts in common dirs
     log "Checking for hidden malicious scripts..."
@@ -228,7 +228,7 @@ if [ "$FIRST_TIME" = true ]; then
         curl wget git build-essential software-properties-common \
         ufw fail2ban nginx certbot python3-certbot-nginx \
         libpq-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libpng-dev \
-        poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript libreoffice-writer libreoffice-nogui \
+        poppler-utils tesseract-ocr tesseract-ocr-eng ghostscript libreoffice-nogui \
         libjemalloc2 \
         libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libopenjp2-7-dev libsecret-1-dev libxml2-dev libxslt1-dev \
         libgvpr2 libgbm1 libasound2 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
@@ -274,7 +274,7 @@ ensure_python_tools() {
     log "Ensuring critical Python and system tools are installed..."
     # On current Ubuntu, python3-pip and python3-venv are essential
     apt-get update -qq
-    apt-get install -y python3-pip python3-venv python3-setuptools libreoffice-writer libreoffice-nogui
+    apt-get install -y python3-pip python3-venv python3-setuptools libreoffice-nogui
     
     # Ensure LibreDWG is installed on existing installations too
     if ! command -v dwg2dxf >/dev/null; then

@@ -73,7 +73,6 @@ apt-get install -y \
     tesseract-ocr-tur \
     tesseract-ocr-vie \
     ghostscript \
-    libreoffice-writer \
     libreoffice-nogui \
     unpaper \
     pngquant \
