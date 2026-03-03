@@ -11,6 +11,17 @@ import tempfile
 import subprocess
 
 class CADService:
+
+    @staticmethod
+    def _get_bin(bin_name: str) -> str:
+        import shutil
+        import os
+        path = shutil.which(bin_name)
+        if path: return path
+        for p in [f"/usr/bin/{bin_name}", f"/usr/local/bin/{bin_name}"]:
+            if os.path.exists(p) and os.access(p, os.X_OK): return p
+        return bin_name
+
     @staticmethod
     async def dwg_to_pdf(cad_bytes: bytes, filename: str) -> Tuple[bytes, int]:
         """Convert DWG/DXF to PDF using ezdxf and matplotlib."""
@@ -26,8 +37,9 @@ class CADService:
                 dxf_path = tmp_path.replace(".dwg", ".dxf")
                 try:
                     # Run dwg2dxf conversion
+                    bin_cmd = CADService._get_bin("dwg2dxf")
                     result = subprocess.run(
-                        ["dwg2dxf", tmp_path],
+                        [bin_cmd, tmp_path],
                         cwd=os.path.dirname(tmp_path),
                         capture_output=True,
                         text=True,
@@ -144,8 +156,9 @@ class CADService:
         
         try:
             # Run dxf2dwg conversion
+            bin_cmd = CADService._get_bin("dxf2dwg")
             subprocess.run(
-                ["dxf2dwg", tmp_dxf_path],
+                [bin_cmd, tmp_dxf_path],
                 cwd=os.path.dirname(tmp_dxf_path),
                 capture_output=True,
                 check=True

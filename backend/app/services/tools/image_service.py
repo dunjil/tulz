@@ -45,6 +45,20 @@ def _get_rembg_session():
 class ImageService:
     """Service for image processing operations."""
 
+    def __init__(self):
+        # Configure pytesseract fallback path for restricted environments
+        import shutil
+        import os
+        try:
+            import pytesseract
+            if not shutil.which("tesseract"):
+                for path in ["/usr/bin/tesseract", "/usr/local/bin/tesseract"]:
+                    if os.path.exists(path) and os.access(path, os.X_OK):
+                        pytesseract.pytesseract.tesseract_cmd = path
+                        break
+        except ImportError:
+            pass
+
     async def process(
         self,
         image_bytes: bytes,

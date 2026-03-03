@@ -86,6 +86,19 @@ class OCRService:
         self._executor = ThreadPoolExecutor(max_workers=2) # Reduced workers
         self._semaphore = asyncio.Semaphore(2) # Limit concurrent OCR tasks
 
+        # Configure pytesseract fallback path for restricted environments
+        import shutil
+        import os
+        try:
+            import pytesseract
+            if not shutil.which("tesseract"):
+                for path in ["/usr/bin/tesseract", "/usr/local/bin/tesseract"]:
+                    if os.path.exists(path) and os.access(path, os.X_OK):
+                        pytesseract.pytesseract.tesseract_cmd = path
+                        break
+        except ImportError:
+            pass
+
     async def extract_text_from_image(
         self,
         image_bytes: bytes,

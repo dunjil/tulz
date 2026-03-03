@@ -28,10 +28,12 @@ class TestLibreOfficeDetection(unittest.TestCase):
         result = self.service._get_libreoffice_bin()
         self.assertEqual(result, "soffice")
 
+    @patch("os.path.exists")
     @patch("shutil.which")
-    def test_get_libreoffice_bin_none(self, mock_which):
-        # Case 3: Both missing
+    def test_get_libreoffice_bin_none(self, mock_which, mock_exists):
+        # Case 3: Both missing in PATH and common paths
         mock_which.return_value = None
+        mock_exists.return_value = False
         
         result = self.service._get_libreoffice_bin()
         self.assertIsNone(result)
@@ -42,7 +44,7 @@ class TestLibreOfficeDetection(unittest.TestCase):
     @patch("os.path.exists")
     @patch("builtins.open")
     @patch("pypdf.PdfReader")
-    async def test_from_docx_calls_correct_bin(self, mock_reader, mock_open, mock_exists, mock_temp, mock_run, mock_get_bin):
+    def test_from_docx_calls_correct_bin(self, mock_reader, mock_open, mock_exists, mock_temp, mock_run, mock_get_bin):
         # Setup mocks
         mock_get_bin.return_value = "soffice"
         mock_exists.return_value = True

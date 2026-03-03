@@ -127,9 +127,17 @@ class PDFService:
         """Compress PDF using Ghostscript for better results."""
         import subprocess
         import shutil
+        import os
 
         # Check if Ghostscript is available
-        if not shutil.which("gs"):
+        gs_bin = shutil.which("gs")
+        if not gs_bin:
+            for path in ["/usr/bin/gs", "/usr/local/bin/gs"]:
+                if os.path.exists(path) and os.access(path, os.X_OK):
+                    gs_bin = path
+                    break
+                    
+        if not gs_bin:
             return None
 
         # Map compression levels to Ghostscript settings
@@ -152,7 +160,7 @@ class PDFService:
                 # Run Ghostscript
                 result = subprocess.run(
                     [
-                        "gs",
+                        gs_bin,
                         "-sDEVICE=pdfwrite",
                         "-dCompatibilityLevel=1.4",
                         f"-dPDFSETTINGS={pdfsetting}",
@@ -1412,12 +1420,19 @@ class PDFService:
                 shutil.rmtree(user_prof, ignore_errors=True)
 
     def _get_libreoffice_bin(self) -> str | None:
-        """Find the LibreOffice or soffice binary in PATH."""
+        """Find the LibreOffice or soffice binary in PATH or common locations."""
         import shutil
+        import os
+        
         for bin_name in ["libreoffice", "soffice"]:
-            p = shutil.which(bin_name)
-            if p:
+            if shutil.which(bin_name):
                 return bin_name
+                
+        # Check common paths if PATH is restricted (e.g., systemd service)
+        for path in ["/usr/bin/libreoffice", "/usr/bin/soffice", "/usr/local/bin/libreoffice", "/usr/local/bin/soffice"]:
+            if os.path.exists(path) and os.access(path, os.X_OK):
+                return path
+                
         return None
 
     async def to_excel(self, pdf_bytes: bytes) -> Tuple[bytes, int]:
