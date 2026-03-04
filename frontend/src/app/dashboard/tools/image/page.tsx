@@ -536,7 +536,7 @@ export default function ImagePage() {
                 <Button
                   className="w-full"
                   onClick={() => {
-                    window.open(`${API_URL}${result.download_url}`, '_blank');
+                    (() => { const a = document.createElement('a'); a.href = `${API_URL}${result.download_url}`; a.download = ''; document.body.appendChild(a); a.click(); document.body.removeChild(a); })();
                     // Coffee popup disabled in favor of watermark-based upgrade flow
                   }}
                 >

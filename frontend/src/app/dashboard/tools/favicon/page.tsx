@@ -132,7 +132,12 @@ export default function FaviconPage() {
 
   const handleDownload = () => {
     if (result) {
-      window.open(`${API_URL}${result.download_url}`, "_blank");
+      const a = document.createElement("a");
+      a.href = `${API_URL}${result.download_url}`;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
@@ -142,20 +147,20 @@ export default function FaviconPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
-              <Globe className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-              Favicon Generator
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Generate all favicon sizes for your website from a single image
-            </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <SupportButton size="sm" />
-          <FreeBadge />
-        </div>
-      </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+                  <Globe className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
+                  Favicon Generator
+                </h1>
+                <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+                  Generate all favicon sizes for your website from a single image
+                </p>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <SupportButton size="sm" />
+                <FreeBadge />
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <SupportButton size="sm" />

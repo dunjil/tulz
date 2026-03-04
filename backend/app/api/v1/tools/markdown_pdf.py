@@ -185,9 +185,13 @@ async def convert_markdown_to_pdf(
             processing_time_ms=processing_time,
         )
 
+        import re
+        slug = re.sub(r"[^\w\-]", "_", title).strip("_")[:60] or "document"
+        out_name = f"{slug}.pdf"
+
         return MarkdownPdfResponse(
             success=True,
-            download_url=f"/api/v1/tools/markdown/download/{filename}",
+            download_url=f"/api/v1/tools/markdown/download/{filename}?name={out_name}",
             stats={
                 "markdown_length": len(data.content),
                 "pdf_size_bytes": len(pdf_bytes),
@@ -202,7 +206,7 @@ async def convert_markdown_to_pdf(
 
 
 @router.get("/download/{filename}")
-async def download_pdf(filename: str):
+async def download_pdf(filename: str, name: Optional[str] = None):
     """Download converted PDF."""
     if not filename or ".." in filename or "/" in filename:
         return {"error": "Invalid filename"}
@@ -212,10 +216,12 @@ async def download_pdf(filename: str):
     if not os.path.exists(filepath):
         return {"error": "File not found or expired"}
 
+    download_name = name if name else "document.pdf"
+
     return FileResponse(
         filepath,
         media_type="application/pdf",
-        filename="document.pdf",
+        filename=download_name,
     )
 
 

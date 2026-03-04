@@ -217,7 +217,7 @@ export default function InstagramResizerPage() {
                                             <div className="text-sm text-muted-foreground">{formatBytes(result.file_size_bytes)} • {result.new_size[0]}x{result.new_size[1]}</div>
                                         </div>
                                     </div>
-                                    <Button size="sm" onClick={() => window.open(`${API_URL}${result.download_url}`, '_blank')}>
+                                    <Button size="sm" onClick={() => (() => { const a = document.createElement('a'); a.href = `${API_URL}${result.download_url}`; a.download = ''; document.body.appendChild(a); a.click(); document.body.removeChild(a); })()}>
                                         <Download className="mr-2 h-4 w-4" />
                                         Save
                                     </Button>

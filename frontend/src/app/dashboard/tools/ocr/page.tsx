@@ -230,7 +230,12 @@ export default function OCRPage() {
 
   const handleDownload = () => {
     if (result?.download_url) {
-      window.open(`${API_URL}${result.download_url}`, "_blank");
+      const a = document.createElement("a");
+      a.href = `${API_URL}${result.download_url}`;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
@@ -255,8 +260,8 @@ export default function OCRPage() {
           </p>
         </div>
         <SupportButton size="sm" />
-          <FreeBadge />
-          
+        <FreeBadge />
+
       </div>
 
       {/* Limitations Notice */}
@@ -363,7 +368,7 @@ export default function OCRPage() {
                       >
                         <div className="flex items-center justify-between w-full">
                           <span>{lang.name}</span>
-                          
+
                         </div>
                       </SelectItem>
                     ))}

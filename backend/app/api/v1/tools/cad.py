@@ -4,6 +4,7 @@ from typing import Optional, List
 import os
 import uuid
 import time
+from pathlib import Path
 from app.services.tools.cad_service import CADService
 from app.api.deps import ClientIP, DbSession, OptionalUser, UserAgent
 from app.config import settings
@@ -18,6 +19,13 @@ TEMP_DIR = settings.temp_file_dir
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 CAD_RATE_LIMIT = "10/minute"
+
+
+def _output_name(original: str | None, suffix: str, ext: str) -> str:
+    """Return a friendly download filename derived from the original upload name."""
+    stem = Path(original).stem if original else "file"
+    ext = ext.lstrip(".")
+    return f"{stem}_{suffix}.{ext}" if suffix else f"{stem}.{ext}"
 
 @router.post("/dwg-to-pdf")
 @limiter.limit(CAD_RATE_LIMIT)
@@ -64,11 +72,12 @@ async def dwg_to_pdf(
             output_metadata={"pages": pages, "size": len(pdf_bytes)},
         )
 
+        out_name = _output_name(file.filename, "", "pdf")
         return {
             "operation": "dwg_to_pdf",
-            "filename": "converted.pdf",
+            "filename": out_name,
             "size": len(pdf_bytes),
-            "download_url": f"/api/v1/tools/cad/download/{filename}",
+            "download_url": f"/api/v1/tools/cad/download/{filename}?name={out_name}",
         }
     except Exception as e:
         raise FileProcessingError(message=f"CAD conversion failed: {str(e)}")
@@ -118,17 +127,18 @@ async def pdf_to_dwg(
             output_metadata={"pages": pages, "size": len(dwg_bytes)},
         )
 
+        out_name = _output_name(file.filename, "", "dwg")
         return {
             "operation": "pdf_to_dwg",
-            "filename": "converted.dwg",
+            "filename": out_name,
             "size": len(dwg_bytes),
-            "download_url": f"/api/v1/tools/cad/download/{filename}",
+            "download_url": f"/api/v1/tools/cad/download/{filename}?name={out_name}",
         }
     except Exception as e:
         raise FileProcessingError(message=f"PDF to CAD conversion failed: {str(e)}")
 
 @router.get("/download/{filename}")
-async def download_cad(filename: str):
+async def download_cad(filename: str, name: Optional[str] = None):
     """Download processed CAD or PDF file."""
     if not filename or ".." in filename or "/" in filename:
         raise BadRequestError(message="Invalid filename")
@@ -137,15 +147,17 @@ async def download_cad(filename: str):
     if not os.path.exists(filepath):
         raise BadRequestError(message="File not found or expired")
 
+    download_name = name if name else filename
+
     if filename.endswith(".pdf"):
         media_type = "application/pdf"
     elif filename.endswith(".dwg"):
         media_type = "application/acad"
     else:
         media_type = "application/dxf"
-    
+
     return FileResponse(
         filepath,
         media_type=media_type,
-        filename=filename,
+        filename=download_name,
     )

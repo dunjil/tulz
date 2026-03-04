@@ -3,6 +3,7 @@
 import os
 import time
 import uuid
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -21,6 +22,22 @@ from app.services.usage_service import UsageService
 router = APIRouter()
 
 TEMP_DIR = settings.temp_file_dir
+
+
+def _stem(original: str | None) -> str:
+    """Return safe filename stem from original upload name."""
+    if not original:
+        return "file"
+    return Path(original).stem or "file"
+
+
+def _output_name(original: str | None, suffix: str, ext: str) -> str:
+    """Build a user-friendly output filename, e.g. 'report_compressed.pdf'."""
+    stem = _stem(original)
+    ext = ext.lstrip(".")
+    if suffix:
+        return f"{stem}_{suffix}.{ext}"
+    return f"{stem}.{ext}"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 
@@ -74,11 +91,12 @@ async def split_pdf(
         with open(filepath, "wb") as f:
             f.write(pdf_bytes)
 
+        out_name = _output_name(file.filename, f"part_{i+1}", "pdf")
         saved_files.append({
-            "filename": f"split_{i+1}.pdf",
+            "filename": out_name,
             "pages": len(pages),  # Return page count, not list
             "size": len(pdf_bytes),
-            "download_url": f"/api/v1/tools/pdf/download/{filename}",
+            "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
         })
         total_size += len(pdf_bytes)
 
@@ -166,14 +184,16 @@ async def merge_pdfs(
         output_metadata={"total_pages": total_pages, "output_size": len(merged_bytes)},
     )
 
+    first_name = files[0].filename if files else None
+    out_name = _output_name(first_name, "merged", "pdf")
     return PDFResponse(
         operation=PDFOperation.MERGE,
         original_pages=total_pages,
         result_files=[{
-            "filename": "merged.pdf",
+            "filename": out_name,
             "pages": total_pages,
             "size": len(merged_bytes),
-            "download_url": f"/api/v1/tools/pdf/download/{filename}",
+            "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
         }],
         total_size_bytes=len(merged_bytes),
     )
@@ -241,14 +261,15 @@ async def compress_pdf(
         },
     )
 
+    out_name = _output_name(file.filename, "compressed", "pdf")
     return PDFResponse(
         operation=PDFOperation.COMPRESS,
         original_pages=total_pages,
         result_files=[{
-            "filename": "compressed.pdf",
+            "filename": out_name,
             "pages": total_pages,
             "size": len(compressed_bytes),
-            "download_url": f"/api/v1/tools/pdf/download/{filename}",
+            "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
             "compression_ratio": f"{compression_ratio:.1f}%",
         }],
         total_size_bytes=len(compressed_bytes),
@@ -309,12 +330,13 @@ async def pdf_to_word(
         output_metadata={"total_pages": total_pages, "output_size": len(docx_bytes)},
     )
 
+    out_name = _output_name(file.filename, "", "docx")
     return {
         "operation": "to_word",
         "original_pages": total_pages,
-        "filename": "converted.docx",
+        "filename": out_name,
         "size": len(docx_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -390,12 +412,13 @@ async def remove_watermark(
         },
     )
 
+    out_name = _output_name(file.filename, "cleaned", "pdf")
     return {
         "operation": "remove_watermark",
         "original_pages": total_pages,
-        "filename": "cleaned.pdf",
+        "filename": out_name,
         "size": len(cleaned_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
         "removal_stats": stats,
     }
 
@@ -451,11 +474,12 @@ async def pdf_to_jpg(
         with open(filepath, "wb") as f:
             f.write(img_bytes)
 
+        out_name = _output_name(file.filename, f"page_{i+1}", "jpg")
         saved_files.append({
-            "filename": f"page_{i+1}.jpg",
+            "filename": out_name,
             "page": i + 1,
             "size": len(img_bytes),
-            "download_url": f"/api/v1/tools/pdf/download/{filename}",
+            "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
         })
         total_size += len(img_bytes)
 
@@ -543,12 +567,14 @@ async def jpg_to_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(pdf_bytes)},
     )
 
+    first_name = files[0].filename if files else None
+    out_name = _output_name(first_name, "", "pdf")
     return {
         "operation": "from_jpg",
         "total_pages": total_pages,
-        "filename": "converted.pdf",
+        "filename": out_name,
         "size": len(pdf_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -610,12 +636,13 @@ async def rotate_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(rotated_bytes)},
     )
 
+    out_name = _output_name(file.filename, "rotated", "pdf")
     return {
         "operation": "rotate",
         "original_pages": total_pages,
-        "filename": "rotated.pdf",
+        "filename": out_name,
         "size": len(rotated_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -677,13 +704,14 @@ async def unlock_pdf(
         },
     )
 
+    out_name = _output_name(file.filename, "unlocked", "pdf")
     return {
         "operation": "unlock",
         "original_pages": total_pages,
-        "filename": "unlocked.pdf",
+        "filename": out_name,
         "size": len(unlocked_bytes),
         "was_encrypted": was_encrypted,
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -746,12 +774,13 @@ async def protect_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(protected_bytes)},
     )
 
+    out_name = _output_name(file.filename, "protected", "pdf")
     return {
         "operation": "protect",
         "original_pages": total_pages,
-        "filename": "protected.pdf",
+        "filename": out_name,
         "size": len(protected_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -808,7 +837,7 @@ async def html_to_pdf(
         "estimated_pages": estimated_pages,
         "filename": "converted.pdf",
         "size": len(pdf_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name=converted.pdf",
     }
 
 
@@ -860,12 +889,13 @@ async def word_to_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(pdf_bytes)},
     )
 
+    out_name = _output_name(file.filename, "", "pdf")
     return {
         "operation": "word_to_pdf",
         "total_pages": total_pages,
-        "filename": "converted.pdf",
+        "filename": out_name,
         "size": len(pdf_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -930,12 +960,13 @@ async def add_watermark(
         output_metadata={"total_pages": total_pages, "output_size": len(watermarked_bytes)},
     )
 
+    out_name = _output_name(file.filename, "watermarked", "pdf")
     return {
         "operation": "add_watermark",
         "original_pages": total_pages,
-        "filename": "watermarked.pdf",
+        "filename": out_name,
         "size": len(watermarked_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -999,12 +1030,13 @@ async def add_page_numbers_endpoint(
         output_metadata={"total_pages": total_pages, "output_size": len(numbered_bytes)},
     )
 
+    out_name = _output_name(file.filename, "numbered", "pdf")
     return {
         "operation": "add_page_numbers",
         "original_pages": total_pages,
-        "filename": "numbered.pdf",
+        "filename": out_name,
         "size": len(numbered_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -1071,12 +1103,13 @@ async def organize_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(organized_bytes)},
     )
 
+    out_name = _output_name(file.filename, "organized", "pdf")
     return {
         "operation": "organize",
         "original_pages": total_pages,
-        "filename": "organized.pdf",
+        "filename": out_name,
         "size": len(organized_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -1138,12 +1171,13 @@ async def crop_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(cropped_bytes)},
     )
 
+    out_name = _output_name(file.filename, "cropped", "pdf")
     return {
         "operation": "crop",
         "original_pages": total_pages,
-        "filename": "cropped.pdf",
+        "filename": out_name,
         "size": len(cropped_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -1195,12 +1229,13 @@ async def excel_to_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(pdf_bytes)},
     )
 
+    out_name = _output_name(file.filename, "", "pdf")
     return {
         "operation": "excel_to_pdf",
         "total_pages": total_pages,
-        "filename": "converted.pdf",
+        "filename": out_name,
         "size": len(pdf_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -1252,17 +1287,18 @@ async def powerpoint_to_pdf(
         output_metadata={"total_pages": total_pages, "output_size": len(pdf_bytes)},
     )
 
+    out_name = _output_name(file.filename, "", "pdf")
     return {
         "operation": "powerpoint_to_pdf",
         "total_pages": total_pages,
-        "filename": "converted.pdf",
+        "filename": out_name,
         "size": len(pdf_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
 @router.get("/download/{filename}")
-async def download_pdf(filename: str):
+async def download_pdf(filename: str, name: Optional[str] = None):
     """Download processed PDF, DOCX, or image file."""
     if not filename or ".." in filename or "/" in filename:
         raise BadRequestError(message="Invalid filename")
@@ -1272,7 +1308,10 @@ async def download_pdf(filename: str):
     if not os.path.exists(filepath):
         raise BadRequestError(message="File not found or expired")
 
-    # Determine media type
+    # Use friendly download name if provided, fall back to disk filename
+    download_name = name if name else filename
+
+    # Determine media type from disk filename extension
     if filename.endswith(".docx"):
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     elif filename.endswith(".pptx"):
@@ -1289,7 +1328,7 @@ async def download_pdf(filename: str):
     return FileResponse(
         filepath,
         media_type=media_type,
-        filename=filename,
+        filename=download_name,
     )
 @router.post("/to-excel")
 @limiter.limit(PDF_RATE_LIMIT)
@@ -1338,12 +1377,13 @@ async def pdf_to_excel(
         output_metadata={"total_pages": total_pages, "output_size": len(excel_bytes)},
     )
 
+    out_name = _output_name(file.filename, "", "xlsx")
     return {
         "operation": "to_excel",
         "original_pages": total_pages,
-        "filename": "converted.xlsx",
+        "filename": out_name,
         "size": len(excel_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }
 
 
@@ -1394,10 +1434,11 @@ async def pdf_to_powerpoint(
         output_metadata={"total_pages": total_pages, "output_size": len(pptx_bytes)},
     )
 
+    out_name = _output_name(file.filename, "", "pptx")
     return {
         "operation": "to_powerpoint",
         "original_pages": total_pages,
-        "filename": "converted.pptx",
+        "filename": out_name,
         "size": len(pptx_bytes),
-        "download_url": f"/api/v1/tools/pdf/download/{filename}",
+        "download_url": f"/api/v1/tools/pdf/download/{filename}?name={out_name}",
     }

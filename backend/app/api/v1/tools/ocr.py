@@ -18,6 +18,7 @@ LIMITATIONS:
 import os
 import time
 import uuid
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, File, Form, UploadFile
@@ -36,6 +37,13 @@ router = APIRouter()
 # Temp file storage
 TEMP_DIR = settings.temp_file_dir
 os.makedirs(TEMP_DIR, exist_ok=True)
+
+
+def _output_name(original: str | None, suffix: str, ext: str) -> str:
+    """Return a friendly download filename derived from the original upload name."""
+    stem = Path(original).stem if original else "file"
+    ext = ext.lstrip(".")
+    return f"{stem}_{suffix}.{ext}" if suffix else f"{stem}.{ext}"
 
 # Allowed file types
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/bmp", "image/tiff"}
@@ -142,14 +150,16 @@ async def image_to_text(
     )
 
     # Save text to downloadable file
+    stem = Path(file.filename).stem if file.filename else "ocr_result"
     text_filename = f"ocr_text_{uuid.uuid4().hex[:8]}.txt"
+    out_name = f"{stem}_text.txt"
     text_path = os.path.join(TEMP_DIR, text_filename)
     with open(text_path, "w", encoding="utf-8") as f:
         f.write(result["text"])
 
     return {
         **result,
-        "download_url": f"/api/v1/tools/ocr/download/{text_filename}",
+        "download_url": f"/api/v1/tools/ocr/download/{text_filename}?name={out_name}",
         "tier": tier,
         "processing_time_ms": processing_time,
     }
@@ -232,14 +242,15 @@ async def pdf_to_searchable(
         },
     )
 
+    out_name = _output_name(file.filename, "searchable", "pdf")
     return {
         "success": True,
-        "filename": result["filename"],
+        "filename": out_name,
         "page_count": result["page_count"],
         "size": result["size"],
         "language": result["language"],
         "language_name": result["language_name"],
-        "download_url": f"/api/v1/tools/ocr/download/{result['filename']}",
+        "download_url": f"/api/v1/tools/ocr/download/{result['filename']}?name={out_name}",
         "tier": tier,
         "processing_time_ms": processing_time,
     }
@@ -330,14 +341,16 @@ async def pdf_to_text(
     )
 
     # Save text to downloadable file
+    stem = Path(file.filename).stem if file.filename else "ocr_result"
     text_filename = f"ocr_text_{uuid.uuid4().hex[:8]}.txt"
+    out_name = f"{stem}_text.txt"
     text_path = os.path.join(TEMP_DIR, text_filename)
     with open(text_path, "w", encoding="utf-8") as f:
         f.write(result["text"])
 
     return {
         **result,
-        "download_url": f"/api/v1/tools/ocr/download/{text_filename}",
+        "download_url": f"/api/v1/tools/ocr/download/{text_filename}?name={out_name}",
         "tier": tier,
         "processing_time_ms": processing_time,
     }
@@ -437,23 +450,24 @@ async def ocr_to_word(
         },
     )
 
+    out_name = _output_name(file.filename, "ocr", "docx")
     return {
         "success": True,
-        "filename": result["filename"],
+        "filename": out_name,
         "size": result["size"],
         "word_count": result["word_count"],
         "confidence": result["confidence"],
         "language": result["language"],
         "language_name": result["language_name"],
         "quality": result.get("quality"),
-        "download_url": f"/api/v1/tools/ocr/download/{result['filename']}",
+        "download_url": f"/api/v1/tools/ocr/download/{result['filename']}?name={out_name}",
         "tier": tier,
         "processing_time_ms": processing_time,
     }
 
 
 @router.get("/download/{filename}")
-async def download_file(filename: str):
+async def download_file(filename: str, name: Optional[str] = None):
     """Download OCR result file."""
     # Validate filename
     if not filename or ".." in filename or "/" in filename:
@@ -469,6 +483,8 @@ async def download_file(filename: str):
     if not os.path.exists(filepath):
         raise BadRequestError(message="File not found or expired")
 
+    download_name = name if name else filename
+
     # Determine media type
     if filename.endswith(".txt"):
         media_type = "text/plain"
@@ -482,7 +498,7 @@ async def download_file(filename: str):
     return FileResponse(
         filepath,
         media_type=media_type,
-        filename=filename,
+        filename=download_name,
     )
 
 

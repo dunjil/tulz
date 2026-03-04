@@ -5,6 +5,7 @@ import os
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 from PIL import Image
@@ -27,6 +28,13 @@ router = APIRouter()
 # Temp file storage
 TEMP_DIR = settings.temp_file_dir
 os.makedirs(TEMP_DIR, exist_ok=True)
+
+
+def _output_name(original: str | None, suffix: str, ext: str) -> str:
+    """Return a friendly download filename derived from the original upload name."""
+    stem = Path(original).stem if original else "file"
+    ext = ext.lstrip(".")
+    return f"{stem}_{suffix}.{ext}" if suffix else f"{stem}.{ext}"
 
 
 @router.post("/process", response_model=ImageResponse)
@@ -174,18 +182,40 @@ async def process_image(
         },
     )
 
+    # Operation-to-suffix mapping for friendly names
+    op_map = {
+        "compress": "compressed",
+        "resize": "resized",
+        "crop": "cropped",
+        "rotate": "rotated",
+        "flip": "flipped",
+        "convert": "",
+        "grayscale": "grayscale",
+        "blur": "blurred",
+        "sharpen": "sharpened",
+        "brightness": "adjusted",
+        "contrast": "adjusted",
+        "remove_background": "no_bg",
+        "watermark": "watermarked",
+        "thumbnail": "thumb",
+        "upscale": "upscaled",
+        "border": "bordered",
+    }
+    suffix = op_map.get(operation.value, operation.value)
+    out_name = _output_name(file.filename, suffix, output_format.value if output_format.value != "jpeg" else "jpg")
+
     return ImageResponse(
         operation=operation,
         original_size=original_size,
         new_size=new_size,
         format=output_format.value,
         file_size_bytes=len(result_bytes),
-        download_url=f"/api/v1/tools/image/download/{filename}",
+        download_url=f"/api/v1/tools/image/download/{filename}?name={out_name}",
     )
 
 
 @router.get("/download/{filename}")
-async def download_image(filename: str):
+async def download_image(filename: str, name: Optional[str] = None):
     """Download processed image."""
     # Validate filename
     if not filename or ".." in filename or "/" in filename:
@@ -195,6 +225,8 @@ async def download_image(filename: str):
 
     if not os.path.exists(filepath):
         raise BadRequestError(message="File not found or expired")
+
+    download_name = name if name else filename
 
     # Determine media type
     ext = filename.split(".")[-1].lower()
@@ -210,7 +242,7 @@ async def download_image(filename: str):
     return FileResponse(
         filepath,
         media_type=media_type,
-        filename=filename,
+        filename=download_name,
     )
 
 
@@ -379,10 +411,14 @@ async def batch_process_images(
             with open(filepath, "wb") as f:
                 f.write(result_bytes)
 
+            ext = output_format.value
+            if output_format.value == "jpeg":
+                ext = "jpg"
+            out_name = _output_name(file.filename, operation.value, ext)
             results.append({
-                "filename": file.filename,
+                "filename": out_name,
                 "success": True,
-                "download_url": f"/api/v1/tools/image/download/{filename}",
+                "download_url": f"/api/v1/tools/image/download/{filename}?name={out_name}",
                 "original_size": original_size,
                 "new_size": new_size,
             })

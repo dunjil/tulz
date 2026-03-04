@@ -1,6 +1,7 @@
 """Website to PDF conversion endpoints."""
 
 import os
+import re
 import time
 import uuid
 from typing import Optional
@@ -147,13 +148,22 @@ async def convert_website_to_pdf(
             },
         )
 
+        # Build a filename from the page title, fall back to domain slug
+        try:
+            from urllib.parse import urlparse
+            domain = urlparse(url).netloc.replace("www.", "") or "website"
+        except Exception:
+            domain = "website"
+        slug = re.sub(r"[^\w\-]", "_", (title or domain).strip())[:60] or "website"
+        out_name = f"{slug}.pdf"
+
         return {
             "success": True,
             "url": url,
             "title": title or "Untitled",
             "page_count": page_count,
             "file_size_bytes": len(pdf_bytes),
-            "download_url": f"/api/v1/tools/webpdf/download/{filename}",
+            "download_url": f"/api/v1/tools/webpdf/download/{filename}?name={out_name}",
             "preview_url": f"/api/v1/tools/webpdf/preview/{filename}",
             "tier": tier,
             "limits": {
@@ -178,7 +188,7 @@ async def convert_website_to_pdf(
 
 
 @router.get("/download/{filename}")
-async def download_pdf(filename: str):
+async def download_pdf(filename: str, name: Optional[str] = None):
     """Download converted PDF."""
     # Validate filename
     if not filename or ".." in filename or "/" in filename:
@@ -192,10 +202,12 @@ async def download_pdf(filename: str):
     if not os.path.exists(filepath):
         raise BadRequestError(message="File not found or expired")
 
+    download_name = name if name else "website.pdf"
+
     return FileResponse(
         filepath,
         media_type="application/pdf",
-        filename=f"website.pdf",
+        filename=download_name,
     )
 
 

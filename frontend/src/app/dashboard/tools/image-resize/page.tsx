@@ -314,7 +314,7 @@ export default function ImageResizePage() {
                                 <Button
                                     className="w-full h-11 bg-green-600 hover:bg-green-700 text-white"
                                     onClick={() => {
-                                        window.open(`${API_URL}${result.download_url}`, '_blank');
+                                        (() => { const a = document.createElement('a'); a.href = `${API_URL}${result.download_url}`; a.download = ''; document.body.appendChild(a); a.click(); document.body.removeChild(a); })();
                                     }}
                                 >
                                     <Download className="mr-2 h-4 w-4" />
