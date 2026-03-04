@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/providers/auth-provider";
-import { Moon, Sun, Menu, Heart, HelpCircle, BookOpen, X } from "lucide-react";
+import { Moon, Sun, Menu, Heart, HelpCircle, BookOpen, X, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +53,13 @@ export function Header() {
             >
               <Heart className="h-4 w-4" />
               Support Us
+            </Link>
+            <Link
+              href="/privacy"
+              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1.5"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Privacy
             </Link>
           </nav>
 
@@ -132,6 +139,14 @@ export function Header() {
               >
                 <Heart className="h-4 w-4" />
                 Support Us
+              </Link>
+              <Link
+                href="/privacy"
+                className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Privacy Policy
               </Link>
 
               <div className="border-t border-slate-200 dark:border-slate-800 my-2"></div>
