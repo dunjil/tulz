@@ -915,7 +915,7 @@ class PDFService:
             loop = asyncio.get_event_loop()
             success = await loop.run_in_executor(
                 _executor,
-                lambda: self._convert_docx_with_libreoffice(docx_path, pdf_path, libreoffice_bin)
+                lambda: self._convert_office_with_libreoffice(docx_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
