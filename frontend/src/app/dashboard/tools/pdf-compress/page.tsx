@@ -1,6 +1,7 @@
 "use client";
 
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { ToolInfoSection } from "@/components/shared/tool-info-section";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -129,7 +130,7 @@ export default function PDFCompressPage() {
           </div>
           <SupportButton size="sm" />
           <FreeBadge />
-          
+
         </div>
       </div>
 
@@ -307,6 +308,32 @@ export default function PDFCompressPage() {
       </div>
 
       <RelatedGuide guideSlug="how-to-reduce-pdf-file-size" />
+
+      <ToolInfoSection
+        heading="About the PDF Compressor"
+        overview="PDF files are essential for sharing documents professionally, but they can grow surprisingly large — especially when they contain high-resolution images, embedded fonts, or scanned pages. Our free online PDF compressor uses the same algorithms found in professional tools like Adobe Acrobat and Ghostscript to reduce file size while keeping your document readable and visually intact."
+        howItWorks="When you upload a PDF, our server analyses the file structure and applies a combination of techniques depending on the compression level you select. At 'Low', we optimise font embedding and strip redundant metadata. At 'Medium', we also re-compress images at a slightly lower quality setting. At 'High', we use aggressive image downscaling and maximum metadata stripping — ideal when you need to meet a strict KB limit. In most cases, 'Medium' compression reduces file size by 40–70% with no visible quality difference to the human eye."
+        benefits={[
+          { title: "No quality loss on text", description: "Our engine prioritises text clarity above all else. Even at the highest compression, your paragraph text, headings, and table data remain perfectly sharp and legible." },
+          { title: "Meet portal file size limits", description: "Government portals, job application systems, and university submission platforms often impose strict limits of 100KB, 200KB, or 1MB. We help you hit those targets precisely." },
+          { title: "Faster email delivery", description: "Most email providers cap attachments at 10–25MB. A compressed PDF is faster to send, faster to download, and easier for recipients on mobile data." },
+          { title: "100% private processing", description: "Your PDF is never stored on our servers. After compression, the output file is available for download for a brief period and then permanently deleted — automatically." },
+        ]}
+        useCases={[
+          "Compressing scanned bank statements, payslips, or tax documents to under 100KB for government or visa portal uploads",
+          "Reducing the size of a large PowerPoint-converted PDF before emailing it to clients",
+          "Shrinking an academic dissertation or thesis for submission to an online portal with strict file limits",
+          "Batch-preparing a portfolio PDF with many photos to share via a download link or messaging app",
+          "Reducing invoices and contracts before archiving large numbers of them in cloud storage",
+        ]}
+        faq={[
+          { q: "How much can I compress a PDF?", a: "It depends on the content. PDFs with high-resolution images can often be reduced by 70–90%. Text-only PDFs are already compact and may only reduce by 10–30%. Our 'High' setting gives you the smallest possible output." },
+          { q: "Will my PDF look blurry after compression?", a: "At 'Low' and 'Medium', the visual quality is virtually indistinguishable from the original. At 'High', images may show slight softness, but all text remains crisp. For official documents, this is almost always acceptable." },
+          { q: "Is there a file size limit for uploads?", a: "Yes, you can upload PDFs up to 50MB. If your original file is larger, we recommend first splitting it with our PDF Splitter and compressing each part separately." },
+          { q: "Can I compress a password-protected PDF?", a: "Not directly. You will need to use our PDF Unlocker first to remove the password, then compress the unlocked version." },
+          { q: "What is the difference between Low, Medium, and High compression?", a: "'Low' strips metadata and optimises without touching images. 'Medium' also re-encodes images at ~75% quality. 'High' uses maximum image downscaling and is ideal for meeting strict upload limits (like DS-160 forms at 240KB or job portals at 100KB)." },
+        ]}
+      />
     </div>
   );
 }

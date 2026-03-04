@@ -29,7 +29,8 @@ import {
     Download,
     FileOutput,
     Presentation,
-    DraftingCompass
+    DraftingCompass,
+    Droplets
 } from "lucide-react";
 
 export interface GuideStep {
@@ -2386,5 +2387,250 @@ export const guides: Guide[] = [
                 { q: "Are both 2D and 3D supported?", a: "The tool works flawlessly with 2D drawings. Complex 3D viewports will be rendered from their default top-down perspective." }
             ]
         }
-    }
+    },
+    {
+        slug: "how-to-password-protect-a-pdf",
+        title: "How to Password Protect a PDF Before Sending It",
+        description: "Keep sensitive documents secure. Add a password to any PDF in seconds so only the intended recipient can open it.",
+        icon: Lock,
+        category: "PDF",
+        lastUpdated: "2026-03-04",
+        readTime: "3 min read",
+        relatedTool: {
+            name: "Protect PDF",
+            href: "/tools/pdf-protect",
+        },
+        content: {
+            intro: "Sending a contract, payslip, or personal document by email is risky if anyone can open the file. A password-protected PDF ensures only the person with the correct password can access its contents — even if the email is forwarded or intercepted.",
+            whyNeeded: "Standard PDFs have no access control at all. Anyone who receives the file can open, copy, or print it. Password protection adds a critical layer of security for financial records, legal documents, medical reports, and private communications.",
+            steps: [
+                {
+                    title: "Upload your PDF to the Protect tool",
+                    description: "Go to our Protect PDF tool. Drag and drop your PDF file into the upload area. We support files up to 50MB.",
+                },
+                {
+                    title: "Set your Password",
+                    description: "Enter a strong password in the 'Open Password' field. Choose something the recipient knows, or agree on it securely before sending. Never put the password in the same email as the document. Optionally, set permissions to restrict printing or copying.",
+                },
+                {
+                    title: "Download and Send the Protected PDF",
+                    description: "Click 'Protect' and download your encrypted file. Send it via email, cloud share, or messaging app. Share the password separately via phone call or SMS.",
+                },
+            ],
+            proTips: [
+                "Share the password through a different channel than the file. Send the PDF by email, and the password by WhatsApp. This protects you if the email is intercepted.",
+                "Use our PDF Unlock tool if you ever need to remove the password from your own documents.",
+            ],
+            faq: [
+                {
+                    q: "What encryption does the Protect tool use?",
+                    a: "We use 128-bit AES encryption for compatibility with all modern PDF readers. This is the same standard used by most professional PDF tools and provides strong protection for business and personal documents."
+                },
+                {
+                    q: "Can the password be cracked?",
+                    a: "AES-128 encryption is extremely difficult to brute-force. Using a complex password (mix of letters, numbers, and symbols over 10 characters) makes it practically impossible to crack without the password."
+                },
+                {
+                    q: "What if the recipient can't open the PDF?",
+                    a: "The recipient needs a PDF reader that supports password-protected PDFs. Adobe Reader, Foxit, and most modern browser PDF viewers support this. If they're using an old app, ask them to try a different reader."
+                }
+            ]
+        },
+    },
+    {
+        slug: "how-to-remove-watermark-from-pdf",
+        title: "How to Remove a Watermark from a PDF File",
+        description: "Got a 'DRAFT' or 'CONFIDENTIAL' watermark stamped across your PDF? Learn how to clean it up for a professional final version.",
+        icon: Droplets,
+        category: "PDF",
+        lastUpdated: "2026-03-04",
+        readTime: "3 min read",
+        relatedTool: {
+            name: "Remove Watermark",
+            href: "/tools/pdf-remove-watermark",
+        },
+        content: {
+            intro: "Watermarks serve a purpose during document review — marking files as 'DRAFT' or 'CONFIDENTIAL' prevents premature distribution. But once a document is finalised, the watermark needs to go. Our free tool analyses your PDF and removes text watermarks, annotation stamps, and overlay objects automatically.",
+            whyNeeded: "Sending a final contract stamped 'DRAFT' looks unprofessional. A 'SAMPLE' watermark on a real invoice creates confusion. Cleaning up the final version of a document is a standard part of any professional workflow.",
+            steps: [
+                {
+                    title: "Upload your watermarked PDF",
+                    description: "Open our Watermark Remover tool and upload the PDF. The tool works best with text-based watermarks like 'DRAFT', 'CONFIDENTIAL', or 'SAMPLE' applied as overlays or annotations.",
+                },
+                {
+                    title: "Process the file automatically",
+                    description: "Our engine scans the PDF for text annotations, overlay layers, and transparent elements that match common watermark patterns and removes them.",
+                },
+                {
+                    title: "Review and Download",
+                    description: "Check the output to ensure the watermark is removed and the underlying content is intact. Download your clean PDF.",
+                },
+            ],
+            proTips: [
+                "If the watermark is embedded as part of the background image (not a text layer), it cannot be removed without manual editing tools like Photoshop.",
+                "For scanned PDFs, watermarks are baked into the image and the tool may not be able to fully remove them.",
+            ],
+            faq: [
+                {
+                    q: "Does it work on image-based watermarks?",
+                    a: "Our tool is optimised for text-based and annotation-based watermarks. Image watermarks embedded into the page background cannot be automatically removed without image editing software."
+                },
+                {
+                    q: "Is the removal permanent?",
+                    a: "Yes. The downloaded file is a clean copy of your PDF. The original file uploaded to Tulz is deleted immediately after processing."
+                }
+            ]
+        },
+    },
+    {
+        slug: "how-to-compress-images-for-whatsapp",
+        title: "How to Compress Images for WhatsApp Without Losing Quality",
+        description: "Stop WhatsApp from destroying your photo quality. Learn how to pre-compress images the right way before sharing.",
+        icon: Minimize2,
+        category: "Image",
+        lastUpdated: "2026-03-04",
+        readTime: "3 min read",
+        relatedTool: {
+            name: "Image Compressor",
+            href: "/tools/image-compress",
+        },
+        content: {
+            intro: "WhatsApp applies its own aggressive compression to photos sent in 'Photos' mode — reducing a 5MB DSLR shot to under 200KB. This causes severe quality loss, especially for screenshots, scanned documents, and product photos. By pre-compressing images yourself before sending, you maintain control over the quality level and avoid WhatsApp's heavy-handed auto-compression.",
+            whyNeeded: "WhatsApp's built-in compression is unpredictable and optimised for speed, not quality. Pre-compressing gives you a consistent, high-quality result while keeping file size small enough to send quickly.",
+            steps: [
+                {
+                    title: "Upload your image to the Image Compressor",
+                    description: "Use our Image Compressor tool. Upload your JPG, PNG, or WebP photo.",
+                },
+                {
+                    title: "Set quality to 80–85% and choose WebP or JPEG",
+                    description: "At 80–85% quality, the image looks identical to the original but is 50–60% smaller. Use WebP for the most efficient result. If the recipient's device may not support WebP, use JPEG.",
+                },
+                {
+                    title: "Download and share via WhatsApp as a Document",
+                    description: "For best quality, send the image in WhatsApp as a 'Document' rather than as a 'Photo'. This bypasses WhatsApp's additional compression and delivers the file exactly as you compressed it.",
+                },
+            ],
+            proTips: [
+                "Sending as a 'Document' in WhatsApp preserves quality completely — the file is sent as-is. Use this for product photos, scanned certificates, and important images.",
+                "For consistent sizing for business purposes, our Image to KB tool lets you target an exact file size, for example exactly 200KB.",
+            ],
+            faq: [
+                {
+                    q: "Why does WhatsApp make photos blurry?",
+                    a: "WhatsApp compresses photos to save data usage and storage on its servers. The default 'Photos' mode can reduce a 5MB image to under 150KB, causing visible blurring and artefacts. Sending as a 'Document' avoids this entirely."
+                },
+                {
+                    q: "What is the ideal file size for WhatsApp photos?",
+                    a: "For WhatsApp 'Photo' mode, images under 1MB are transmitted with minimal additional compression. Pre-compressing to 500KB–1MB gives the best balance of quality and speed."
+                }
+            ]
+        },
+    },
+    {
+        slug: "how-to-create-qr-code-for-restaurant-menu",
+        title: "How to Create a QR Code for Your Restaurant Menu",
+        description: "Replace paper menus with a modern, hygienic QR code solution. Set up your digital menu QR in under 5 minutes.",
+        icon: QrCode,
+        category: "Utility",
+        lastUpdated: "2026-03-04",
+        readTime: "4 min read",
+        relatedTool: {
+            name: "QR Code Generator",
+            href: "/tools/qrcode",
+        },
+        content: {
+            intro: "Paper menus are expensive to reprint, unhygienic, and inflexible. A QR code menu lets customers scan and view your current menu on their own phone — always up to date, zero printing required. Setting one up takes less than 5 minutes with Tulz.",
+            whyNeeded: "QR code menus became standard during 2020–2021 and many customers now actively prefer them. They reduce contact, allow real-time updates (add specials, mark items as sold out), and eliminate the cost of reprinting menus for every seasonal change.",
+            steps: [
+                {
+                    title: "Host your menu online",
+                    description: "Your menu needs to be accessible via a URL. Upload a PDF menu to Google Drive, Dropbox, or your website and copy the public share link. Alternatively, create a free page on a service like Linktree or Canva.",
+                },
+                {
+                    title: "Generate the QR code with Tulz",
+                    description: "Open our QR Code Generator, select 'URL' type, paste your menu link, and customise the colours to match your restaurant's branding.",
+                },
+                {
+                    title: "Download as SVG and Print",
+                    description: "Download in SVG format for the crispest print quality. Place the QR code on table cards, placemats, window stickers, or receipts. Test it with multiple phones before going live.",
+                },
+            ],
+            proTips: [
+                "Print QR codes at a minimum of 3cm × 3cm for reliable scanning. Larger is always better for table placement.",
+                "If you update your menu URL, you will need to reprint the QR code. To avoid this, use a URL shortener (like Bitly) as the QR destination — you can change where the short link points without reprinting.",
+            ],
+            faq: [
+                {
+                    q: "What if customers don't know how to scan a QR code?",
+                    a: "All modern smartphones (iPhone 2017+ and most Android 2018+) can scan QR codes directly with the default camera app. Simply point the camera at the code and tap the notification that appears."
+                },
+                {
+                    q: "Do I need to pay for a 'dynamic' QR code service?",
+                    a: "Not necessarily. If you use a URL shortener as the destination link, you can change where customers are directed without reprinting. This gives you the main benefit of a dynamic QR code for free."
+                },
+                {
+                    q: "Can I add my restaurant logo to the QR code?",
+                    a: "Our QR generator supports custom colours to match your brand. QR codes include error correction, so up to 30% of the code can be covered while remaining scannable."
+                }
+            ]
+        },
+    },
+    {
+        slug: "best-free-pdf-tools-online-no-signup",
+        title: "The Best Free PDF Tools Online That Require No Sign-Up in 2026",
+        description: "A curated guide to the most useful free PDF tools available in 2026 — no account, no credit card, no tricks.",
+        icon: Files,
+        category: "PDF",
+        lastUpdated: "2026-03-04",
+        readTime: "5 min read",
+        relatedTool: {
+            name: "All PDF Tools",
+            href: "/#tools",
+        },
+        content: {
+            intro: "Most 'free' PDF tool websites have a catch: a 3-per-day limit, mandatory account creation, or an aggressive paywall that appears after you've already uploaded your file. This guide lists the genuinely free PDF tools available on Tulz that you can use immediately with no registration and no hidden limits.",
+            whyNeeded: "PDF manipulation is a universal need — compressing a scan for a government upload, converting a Word document for a client, or extracting pages from a report. You shouldn't need to pay a monthly subscription or hand over your email address just to do basic document work.",
+            steps: [
+                {
+                    title: "Compress PDF — Free, No Daily Limit",
+                    description: "Our Compress PDF tool reduces file size using Ghostscript-powered algorithms. Choose Low, Medium, or High compression. No sign-up, no daily limits. Works on any device.",
+                },
+                {
+                    title: "Merge PDFs — Combine up to 20 Files Free",
+                    description: "Use the PDF Merger to combine multiple documents into one. Upload up to 20 files at once, arrange them in the correct order, and download a single unified PDF.",
+                },
+                {
+                    title: "Convert PDF to Word — Fully Editable .docx",
+                    description: "Our PDF to Word converter reconstructs your document as an editable Word file, preserving tables, images, and layout. Free for all users, no account needed.",
+                },
+                {
+                    title: "Split PDF — Extract Any Pages You Need",
+                    description: "Open the PDF Splitter to extract specific pages or divide a large document into smaller parts. Define page ranges or extract individual pages by number.",
+                },
+                {
+                    title: "Other essential free tools",
+                    description: "Tulz also offers free tools for: PDF to JPG, JPG to PDF, Rotate PDF, Protect PDF, Unlock PDF, Watermark PDF, Add Page Numbers, Organise PDF, Crop PDF, Word to PDF, Excel to PDF, PowerPoint to PDF, and HTML to PDF. All free, all without sign-up.",
+                },
+            ],
+            proTips: [
+                "Bookmark the Tulz homepage. We add new free tools regularly based on user requests.",
+                "Need to do multiple operations? Chain tools together — Split PDF, then Compress, then Merge — in sequence for full control over your document.",
+            ],
+            faq: [
+                {
+                    q: "Are Tulz tools really free with no limits?",
+                    a: "Yes. We do not enforce daily usage limits or require sign-up for any core PDF tools. Our service is supported by non-intrusive advertising. All core tools will always have a generous free tier."
+                },
+                {
+                    q: "Is it safe to upload sensitive PDF documents?",
+                    a: "Tulz processes files in temporary, isolated server memory. All uploaded files are permanently deleted immediately after processing. We have no ability to view or store your document content. See our Privacy Policy for full details."
+                },
+                {
+                    q: "Why do most PDF tool sites require sign-up?",
+                    a: "Most services use mandatory accounts to build marketing lists or to enforce artificial usage limits that funnel users to paid plans. We operate on a different model: we stay free through advertising and optional community support, with no data collection requirements."
+                }
+            ]
+        },
+    },
 ];

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { ToolInfoSection } from "@/components/shared/tool-info-section";
 import { api, apiHelpers, shouldShowErrorToast } from "@/lib/api";
 import { useLoginModal } from "@/components/shared/login-modal";
 import { useProgressModal } from "@/components/shared/progress-modal";
@@ -121,7 +122,7 @@ export default function PDFToWordPage() {
           </div>
           <SupportButton size="sm" />
           <FreeBadge />
-          
+
         </div>
       </div>
 
@@ -269,6 +270,32 @@ export default function PDFToWordPage() {
         </div>
       </div>
       <RelatedGuide guideSlug="how-to-convert-pdf-to-word" />
+
+      <ToolInfoSection
+        heading="About the PDF to Word Converter"
+        overview="PDF is a great format for sharing finalized documents — but when you need to edit the content, you're stuck unless you have the original source file. Our free PDF to Word converter analyses the structure of your document and reconstructs it as a fully editable .docx file, including text, tables, images, column layouts, and styling. You can then open it in Microsoft Word, Google Docs, LibreOffice, or any compatible editor."
+        howItWorks="PDF-to-Word conversion is a technically complex process. PDFs do not store documents as structured text the way Word does — they store instructions for drawing text and graphics at specific positions on a page. To convert them back to Word, our engine uses AI-assisted layout detection to identify paragraphs, headers, tables, lists, and image regions, then reconstructs them as corresponding Word elements (.docx XML). The result is an editable document that closely mirrors the original layout. For digitally created PDFs, accuracy is typically very high. For scanned PDFs, we recommend using OCR first."
+        benefits={[
+          { title: "Accurate layout reconstruction", description: "Our engine preserves multi-column layouts, table structures, and paragraph spacing rather than dumping all text into a single column." },
+          { title: "Editable in any Word processor", description: "The output is a standard .docx file compatible with Microsoft Word 2010+, Google Docs, Apple Pages, LibreOffice, and WPS Office." },
+          { title: "Works on all devices", description: "Convert PDFs directly from your phone, tablet, or desktop — no software installation or account required." },
+          { title: "Images preserved", description: "Embedded photos, illustrations, and diagrams are extracted from the PDF and placed in the correct position in the Word document." },
+        ]}
+        useCases={[
+          "Editing a contract or legal document received as a PDF when you don't have the original Word source",
+          "Updating a CV or resume that someone only gave you in PDF format",
+          "Extracting and editing the text of a government form or official document",
+          "Repurposing content from a PDF report into a new presentation or document",
+          "Correcting errors in a finalized PDF report without going back to the original author",
+        ]}
+        faq={[
+          { q: "How accurate is the Word conversion?", a: "For standard digital PDFs (created by Word, InDesign, or similar tools), accuracy is typically 90–99%. Complex multi-column layouts with many overlapping elements may require minor manual adjustments after conversion." },
+          { q: "Can I convert a scanned PDF to Word?", a: "Scanned PDFs are images of text, not actual text. Direct conversion will result in a Word file containing the page as a picture, not editable text. Use our OCR tool first to extract the text layer, then edit it directly." },
+          { q: "Is my document private?", a: "Yes. Your PDF is uploaded to our servers only to perform the conversion. It is permanently deleted immediately after processing completes. We never read, store, or share your document content." },
+          { q: "What is the maximum file size?", a: "You can upload PDFs up to 50MB in size. For very large documents, processing may take 30–60 seconds." },
+          { q: "Can I convert multiple PDFs at once?", a: "Currently, you can convert one PDF at a time. For batch conversions, simply upload them one by one — each takes only a few seconds." },
+        ]}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { ToolInfoSection } from "@/components/shared/tool-info-section";
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -105,8 +106,8 @@ export default function ImageCompressPage() {
                         </p>
                     </div>
                     <SupportButton size="sm" />
-          <FreeBadge />
-          
+                    <FreeBadge />
+
                 </div>
             </div>
 
@@ -241,6 +242,32 @@ export default function ImageCompressPage() {
                 </Card>
             </div>
             <RelatedGuide guideSlug="how-to-compress-images-without-losing-quality" />
+
+            <ToolInfoSection
+                heading="About the Image Compressor"
+                overview="Images are the largest contributors to slow-loading websites and oversized email attachments. Our free online image compressor reduces the file size of your JPG, PNG, and WebP photos without any visible quality degradation for most use cases. Whether you're optimising a website for faster loading times, reducing the size of a profile picture for a portal, or shrinking a product photo for an online shop, our compressor handles it quickly and privately."
+                howItWorks="Image compression works by reducing the amount of data needed to represent your image. For JPEG compression, we re-encode the image at your chosen quality level (10–100%). At 85%, the result is typically 40–60% smaller with virtually no visible difference. Choosing WebP as the output format often achieves an additional 20–30% reduction compared to JPEG at equivalent quality, because WebP uses a more efficient compression algorithm developed by Google. Lossless operations like PNG → PNG use a different approach: they analyse the pixel data and reorder it more efficiently without discarding any information."
+                benefits={[
+                    { title: "Dramatically smaller files", description: "Our compressor typically reduces JPG and PNG files by 40–70% without any visible quality degradation. WebP output frequently achieves even better results." },
+                    { title: "Faster website load times", description: "Images are the #1 cause of slow-loading web pages. Smaller images mean faster load times, better Core Web Vitals scores, and improved Google search rankings." },
+                    { title: "Meet portal upload limits", description: "Many job application portals, government websites, and social media platforms enforce strict file size limits. Our compressor helps you hit targets like 20KB, 50KB, 100KB, or 200KB." },
+                    { title: "WebP for maximum efficiency", description: "WebP is the modern image format developed by Google. It produces images 25–35% smaller than JPEG at the same quality level and is supported by all modern browsers." },
+                ]}
+                useCases={[
+                    "Compressing product photos before uploading them to an e-commerce platform like Shopify, WooCommerce, or Etsy",
+                    "Reducing profile picture size for a government portal, LinkedIn, or job application system",
+                    "Optimising blog post images and thumbnails for WordPress or similar CMS to improve page speed",
+                    "Shrinking screenshots and images before attaching them to emails or support tickets",
+                    "Reducing image size before WhatsApp sharing to avoid full-quality compression by the app",
+                ]}
+                faq={[
+                    { q: "What is the difference between lossy and lossless compression?", a: "Lossy compression (like JPEG at less than 100%) permanently removes some image data to achieve smaller sizes. At 80–90% quality, the loss is imperceptible to the human eye. Lossless compression (like PNG to optimised PNG) reorganises data without losing anything — the result is identical to the original but stored more efficiently." },
+                    { q: "Should I use JPEG or WebP?", a: "WebP is almost always the better choice for web use. It produces smaller files at the same quality and is supported by all modern browsers (Chrome, Firefox, Safari 14+, Edge). Use JPEG for compatibility with older systems or for printing." },
+                    { q: "How much can I compress an image?", a: "It depends on the content. Photos with many gradients and colours compress better than flat illustrations. At quality 80%, a 5MB JPEG photo typically compresses to under 1MB. A flat logo or screenshot may only compress to 2–3MB." },
+                    { q: "Is my image stored after compression?", a: "No. Your image is processed in an isolated temporary environment and deleted immediately after your download is ready. We cannot view or recover your images after processing." },
+                    { q: "Can I compress transparent PNG images?", a: "Yes. PNG compression is lossless and preserves transparency. If you choose JPEG output, transparency will be replaced with a white background. Use WebP output to keep transparency with high compression." },
+                ]}
+            />
         </div>
     );
 }

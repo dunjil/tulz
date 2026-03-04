@@ -1,6 +1,7 @@
 "use client";
 
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { ToolInfoSection } from "@/components/shared/tool-info-section";
 
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -223,7 +224,7 @@ export default function QRCodePage() {
           </div>
           <SupportButton size="sm" />
           <FreeBadge />
-          
+
         </div>
       </div>
 
@@ -601,6 +602,32 @@ export default function QRCodePage() {
         onClose={() => setShowCoffeePopup(false)}
       /> */}
       <RelatedGuide guideSlug="how-to-create-business-qr-codes" />
+
+      <ToolInfoSection
+        heading="About the QR Code Generator"
+        overview="QR codes (Quick Response codes) are two-dimensional barcodes readable by any smartphone camera. They act as instant bridges between physical materials and digital destinations — printing a QR code on a business card, a restaurant table, or a product label lets anyone jump directly to your website, Wi-Fi network, or contact details with a single scan. Our free QR code generator lets you create professional-quality QR codes for URLs, WiFi, contacts (vCard), email addresses, and plain text, with full customisation of colour and size."
+        howItWorks="A QR code encodes data as a matrix of black and white modules arranged in a square grid. The pattern includes error correction data, which means QR codes can be read even if up to 30% is obscured or damaged. Our generator uses the QR Code Model 2 standard (the most widely compatible version) to ensure your codes scan reliably on all devices. For print media, we recommend downloading in SVG format — it scales to any size without pixelation. For digital use (websites, email signatures, presentations), PNG at 300–400px is ideal."
+        benefits={[
+          { title: "5 content types", description: "Create QR codes for URLs, WiFi networks (automatically configure guest Wi-Fi when scanned), vCard contact cards, email addresses, and plain text messages." },
+          { title: "SVG for print, PNG for digital", description: "SVG format is infinitely scalable — perfect for business cards, signage, and packaging. PNG is ideal for websites and presentations." },
+          { title: "Custom colours", description: "Match your brand identity by customising both the QR pattern colour and background colour. We validate that your colour combination maintains adequate contrast for reliable scanning." },
+          { title: "No expiry", description: "These are static QR codes — the data is written directly into the pattern. They will continue to work forever, with no hosting fees or subscription required." },
+        ]}
+        useCases={[
+          "Restaurants: create a QR code linking to your digital menu to replace paper menus",
+          "Events and conferences: add a QR code to name badges or lanyards that links to your LinkedIn profile",
+          "Retail and packaging: link to product manuals, tutorial videos, or warranty registration pages",
+          "Hotels and Airbnb hosts: create a Wi-Fi QR code for guests to connect without sharing your password verbally",
+          "Freelancers and developers: create a vCard QR code for your business card that saves all your contact details to the phone in one tap",
+        ]}
+        faq={[
+          { q: "Do Tulz QR codes expire?", a: "No. These are static QR codes — the data is encoded directly into the visual pattern. They will work indefinitely as long as the underlying URL or resource is still active." },
+          { q: "How small can I print a QR code?", a: "Most QR codes are reliably scannable at a minimum size of 2cm x 2cm (about 0.75 inches). For very small print sizes (like on a wristband or small label), use a lower data density (shorter URL) and print in SVG format." },
+          { q: "Can I track how many times my QR code was scanned?", a: "Not directly through Tulz. For analytics, we recommend using a URL shortener like Bitly or a UTM-tagged link before generating the QR code — this lets you track scans in Google Analytics." },
+          { q: "What is the best colour contrast for reliable scanning?", a: "Dark pattern on a light background works best. Avoid light grey on white or dark blue on black. A contrast ratio of at least 4:1 is recommended. If using a custom brand colour, test the code before printing at scale." },
+          { q: "What is a vCard QR code?", a: "A vCard QR code encodes your contact information (name, phone, email, organisation) in the standard vCard format. When someone scans it, their phone will ask if they want to save you as a new contact — no typing required." },
+        ]}
+      />
     </div>
   );
 }

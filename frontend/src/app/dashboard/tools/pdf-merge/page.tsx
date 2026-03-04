@@ -1,6 +1,7 @@
 "use client";
 
 import { RelatedGuide } from "@/components/shared/related-guide";
+import { ToolInfoSection } from "@/components/shared/tool-info-section";
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -129,7 +130,7 @@ export default function PDFMergePage() {
           </div>
           <SupportButton size="sm" />
           <FreeBadge />
-          
+
         </div>
       </div>
 
@@ -318,6 +319,32 @@ export default function PDFMergePage() {
         </div>
       </div>
       <RelatedGuide guideSlug="how-to-merge-multiple-pdfs" />
+
+      <ToolInfoSection
+        heading="About the PDF Merger"
+        overview="Merging PDFs is one of the most common document tasks in professional and academic life. Instead of sending five separate email attachments for a job application, or presenting a scattered collection of invoices to your accountant, a single merged PDF is cleaner, more professional, and easier to manage. Our free PDF merger combines your files in seconds, preserving the original quality, formatting, and page structure of every document."
+        howItWorks="When you upload multiple PDF files, our server processes them using a high-fidelity PDF engine that understands document structure — including embedded fonts, vector graphics, form fields, and page metadata. Files are stitched together in the exact order you specify, and the result is a single standard-compliant PDF/A-compatible document. The merged file is available for download immediately, and all uploaded files are permanently deleted from our servers as soon as the job completes."
+        benefits={[
+          { title: "Combine up to 20 files at once", description: "Upload and merge multiple PDFs in a single operation. Order them by dragging and dropping before you click merge — what you see is exactly what you get." },
+          { title: "Zero quality loss", description: "Unlike some tools that flatten or rasterize pages during merging, our engine keeps every page in its original vector or raster format, so your output is indistinguishable from the original files." },
+          { title: "Works with all PDF types", description: "Whether your files are scanned documents, digitally created reports, or exported presentations, our merger handles all standard PDF types and orientations, including mixed A4 and Letter sizes." },
+          { title: "No software installation", description: "You do not need Adobe Acrobat, LibreOffice, or any other desktop software. The merger runs entirely in the cloud via your browser — on any device, on any operating system." },
+        ]}
+        useCases={[
+          "Combining a CV, cover letter, transcript, and reference letters into a single application PDF",
+          "Merging monthly bank statements into a single annual financial document for your accountant or mortgage lender",
+          "Combining multiple invoices into one document for a client payment summary",
+          "Assembling a construction bid with drawings, specifications, and schedules into a single submission file",
+          "Combining scan batches from a multi-page document that was scanned in sections",
+        ]}
+        faq={[
+          { q: "How many files can I merge at once?", a: "You can merge up to 20 PDF files in a single operation. There is no limit on the total number of pages, though very large documents (e.g. 1,000+ pages) may take longer to process." },
+          { q: "Can I merge PDFs of different page sizes?", a: "Yes. Our engine handles mixed page sizes (A4, Letter, Legal, custom) without any problems. Each page retains its original dimensions in the merged file." },
+          { q: "Are my files private during merging?", a: "Completely. All uploaded files are processed in temporary, isolated memory. They are permanently deleted from our servers as soon as your merged download is ready — we have no ability to view or save your content." },
+          { q: "Can I merge password-protected PDFs?", a: "No — password-protected PDFs must be unlocked first using our PDF Unlocker. Once unlocked, you can merge them normally." },
+          { q: "Does merging change the file size?", a: "The merged file size is roughly the sum of the individual file sizes. If the result is too large for your needs, run it through our PDF Compressor to reduce it." },
+        ]}
+      />
     </div>
   );
 }
