@@ -1399,6 +1399,19 @@ class PDFService:
             # Get directory containing the input file
             input_dir = os.path.dirname(input_path)
 
+            # Build a safe environment with full system PATH.
+            # When running under systemd, PATH is stripped to only the venv bin,
+            # causing LibreOffice's own shell script to fail when it calls
+            # dirname, basename, grep, uname, etc.
+            import os as _os
+            safe_env = _os.environ.copy()
+            current_path = safe_env.get("PATH", "")
+            system_paths = "/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin"
+            safe_env["PATH"] = f"{current_path}:{system_paths}" if current_path else system_paths
+            # LibreOffice also needs HOME to be a writable directory
+            if "HOME" not in safe_env or not safe_env["HOME"]:
+                safe_env["HOME"] = user_prof
+
             # Run LibreOffice in headless mode with isolated user profile
             result = subprocess.run(
                 [
@@ -1415,6 +1428,7 @@ class PDFService:
                 ],
                 capture_output=True,
                 timeout=60,
+                env=safe_env,
             )
 
             if result.returncode != 0:
