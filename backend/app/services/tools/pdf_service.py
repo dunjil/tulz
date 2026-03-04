@@ -911,16 +911,20 @@ class PDFService:
         pdf_path = docx_path.replace(".docx", ".pdf")
 
         try:
+            import logging
+            log = logging.getLogger(__name__)
+
             # Run LibreOffice conversion in thread pool
             loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
+            success, error_detail = await loop.run_in_executor(
                 _executor,
                 lambda: self._convert_office_with_libreoffice(docx_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
+                log.error(f"Word to PDF failed. LibreOffice bin: {libreoffice_bin} | Detail: {error_detail}")
                 raise FileProcessingError(
-                    message="DOCX conversion failed. The file may be corrupted or use unsupported features."
+                    message=f"DOCX conversion failed: {error_detail or 'LibreOffice returned a non-zero exit code. Check server logs.'}"
                 )
 
             # Read result
@@ -1293,13 +1297,13 @@ class PDFService:
         try:
             # Run LibreOffice conversion in thread pool
             loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
+            success, error_detail = await loop.run_in_executor(
                 _executor, lambda: self._convert_office_with_libreoffice(excel_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
                 raise FileProcessingError(
-                    message="Excel conversion failed. The file may be corrupted or use unsupported features."
+                    message=f"Excel conversion failed: {error_detail or 'LibreOffice returned a non-zero exit code.'}"
                 )
 
             # Read result
@@ -1349,13 +1353,13 @@ class PDFService:
         try:
             # Run LibreOffice conversion in thread pool
             loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
+            success, error_detail = await loop.run_in_executor(
                 _executor, lambda: self._convert_office_with_libreoffice(pptx_path, pdf_path, libreoffice_bin)
             )
 
             if not success or not os.path.exists(pdf_path):
                 raise FileProcessingError(
-                    message="PowerPoint conversion failed. The file may be corrupted or use unsupported features."
+                    message=f"PowerPoint conversion failed: {error_detail or 'LibreOffice returned a non-zero exit code.'}"
                 )
 
             # Read result
@@ -1375,11 +1379,17 @@ class PDFService:
             if os.path.exists(pdf_path):
                 os.unlink(pdf_path)
 
-    def _convert_office_with_libreoffice(self, input_path: str, output_path: str, libreoffice_bin: str = "libreoffice") -> bool:
-        """Convert Office files (DOCX, XLSX, PPTX) to PDF using LibreOffice headless."""
+    def _convert_office_with_libreoffice(self, input_path: str, output_path: str, libreoffice_bin: str = "libreoffice") -> tuple[bool, str]:
+        """Convert Office files (DOCX, XLSX, PPTX) to PDF using LibreOffice headless.
+        
+        Returns:
+            Tuple of (success, error_detail) where error_detail is empty on success.
+        """
         import subprocess
         import tempfile
         import shutil
+        import logging
+        log = logging.getLogger(__name__)
 
         # Generate a unique profile directory to avoid lock file conflicts
         # when running concurrently or via celery workers.
@@ -1407,12 +1417,18 @@ class PDFService:
                 timeout=60,
             )
 
-            return result.returncode == 0
+            if result.returncode != 0:
+                stderr = result.stderr.decode(errors="replace").strip()
+                stdout = result.stdout.decode(errors="replace").strip()
+                detail = stderr or stdout or f"exit code {result.returncode}"
+                log.error(f"LibreOffice conversion failed ({libreoffice_bin}): {detail}")
+                return False, detail
+
+            return True, ""
 
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"LibreOffice conversion failed: {str(e)}")
-            return False
+            log.error(f"LibreOffice conversion exception: {str(e)}")
+            return False, str(e)
             
         finally:
             # Always clean up the temporary isolated profile
