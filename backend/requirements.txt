@@ -47,6 +47,7 @@ pandas==2.2.3
 
 # File Processing - Images
 rembg==2.0.59
+pillow-heif==0.21.0
 
 # OCR (Optical Character Recognition)
 # IMPORTANT: Requires Tesseract system package:

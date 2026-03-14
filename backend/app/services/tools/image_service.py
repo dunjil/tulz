@@ -46,6 +46,13 @@ class ImageService:
     """Service for image processing operations."""
 
     def __init__(self):
+        try:
+            from pillow_heif import register_heif_opener
+            register_heif_opener()
+            logger.info("Registered HEIF opener for Pillow")
+        except ImportError:
+            logger.warning("pillow-heif not installed, HEIC support disabled")
+
         # Configure pytesseract fallback path for restricted environments
         import shutil
         import os

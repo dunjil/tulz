@@ -33,6 +33,16 @@ FILE_SIGNATURES = {
     "bmp": [
         (b"BM", 0),  # Bitmap
     ],
+    "heic": [
+        (b"ftypheic", 4),
+        (b"ftypheix", 4),
+        (b"ftypmif1", 4),
+        (b"ftyphevc", 4),
+    ],
+    "heif": [
+        (b"ftypheif", 4),
+        (b"ftypmif1", 4),
+    ],
     # Office documents
     "xlsx": [
         (b"PK\x03\x04", 0),  # ZIP-based (Office Open XML)
@@ -133,7 +143,7 @@ def validate_image_file(content: bytes, content_type: Optional[str] = None) -> t
 
     SECURITY: Validates actual file content, not just headers.
     """
-    valid_image_types = {"png", "jpeg", "jpg", "gif", "webp", "bmp"}
+    valid_image_types = {"png", "jpeg", "jpg", "gif", "webp", "bmp", "heic", "heif"}
 
     detected_type = get_file_type_from_content(content)
 
