@@ -75,14 +75,14 @@ export default function DashboardLayout({
       <main className="pt-[60px]">
         <div className="w-full max-w-screen-2xl mx-auto px-4 py-4 sm:py-8 flex flex-col min-h-[calc(100vh-60px)]">
           {/* Header Ad - Desktop only */}
-          <div className="hidden sm:block">
+          {/* <div className="hidden sm:block">
             <GoogleAdBanner className="mb-6" />
-          </div>
+          </div> */}
 
           {/* Header Ad - Mobile only, compact 50px banner */}
-          <div className="sm:hidden mb-1 max-h-[50px] overflow-hidden">
+          {/* <div className="sm:hidden mb-1 max-h-[50px] overflow-hidden">
             <GoogleAdBanner bare />
-          </div>
+          </div> */}
 
           <div className="flex-1">
             {children}
