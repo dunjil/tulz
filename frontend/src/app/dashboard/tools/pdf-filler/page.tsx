@@ -464,6 +464,10 @@ export default function PDFFillerPage() {
   // Tool state
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const annotationsRef = useRef<Annotation[]>([]);
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
   const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -1810,57 +1814,11 @@ export default function PDFFillerPage() {
       }
     }
 
+    // Dragging/resizing a selected annotation with the select tool is handled
+    // by the window-level effect below (see "cross-page drag" comment) so
+    // that a move can continue seamlessly onto a different page's canvas.
     if (activeTool === "select" && dragStart && selectedAnnotation) {
-      if (resizeHandle) {
-        // Resize annotation
-        const selectedAnn = annotations.find((a) => a.id === selectedAnnotation);
-        if (!selectedAnn) return;
-
-        let newX = selectedAnn.x;
-        let newY = selectedAnn.y;
-        let newWidth = selectedAnn.width;
-        let newHeight = selectedAnn.height;
-
-        const minSize = 20; // Minimum width/height
-
-        switch (resizeHandle) {
-          case "se": // Bottom-right
-            newWidth = Math.max(minSize, coords.x - selectedAnn.x);
-            newHeight = Math.max(minSize, coords.y - selectedAnn.y);
-            break;
-          case "sw": // Bottom-left
-            newWidth = Math.max(minSize, selectedAnn.x + selectedAnn.width - coords.x);
-            newHeight = Math.max(minSize, coords.y - selectedAnn.y);
-            newX = Math.min(coords.x, selectedAnn.x + selectedAnn.width - minSize);
-            break;
-          case "ne": // Top-right
-            newWidth = Math.max(minSize, coords.x - selectedAnn.x);
-            newHeight = Math.max(minSize, selectedAnn.y + selectedAnn.height - coords.y);
-            newY = Math.min(coords.y, selectedAnn.y + selectedAnn.height - minSize);
-            break;
-          case "nw": // Top-left
-            newWidth = Math.max(minSize, selectedAnn.x + selectedAnn.width - coords.x);
-            newHeight = Math.max(minSize, selectedAnn.y + selectedAnn.height - coords.y);
-            newX = Math.min(coords.x, selectedAnn.x + selectedAnn.width - minSize);
-            newY = Math.min(coords.y, selectedAnn.y + selectedAnn.height - minSize);
-            break;
-        }
-
-        const newAnnotations = annotations.map((a) =>
-          a.id === selectedAnnotation
-            ? { ...a, x: newX, y: newY, width: newWidth, height: newHeight }
-            : a
-        );
-        setAnnotations(newAnnotations as Annotation[]);
-      } else {
-        // Move annotation
-        const newAnnotations = annotations.map((a) =>
-          a.id === selectedAnnotation
-            ? { ...a, x: coords.x - dragOffset.x, y: coords.y - dragOffset.y }
-            : a
-        );
-        setAnnotations(newAnnotations as Annotation[]);
-      }
+      // no-op here
     } else if (
       (activeTool === "draw" || activeTool === "eraser") &&
       isDrawing
@@ -1892,9 +1850,8 @@ export default function PDFFillerPage() {
     const coords = getCanvasCoords(e, activeCanvas);
 
     if (activeTool === "select" && dragStart && selectedAnnotation) {
-      addToHistory(annotations);
-      setDragStart(null);
-      setResizeHandle(null);
+      // Finalized by the window-level mouseup listener in the cross-page
+      // drag effect below, which sees the true final annotation state.
     } else if (activeTool === "draw" && isDrawing && currentPath.length > 1) {
       const id = `draw-${Date.now()}`;
       const bounds = currentPath.reduce(
@@ -2087,8 +2044,135 @@ export default function PDFFillerPage() {
 
     setIsDrawing(false);
     setCurrentPath([]);
-    setDragStart(null);
+    // Don't clear dragStart for an active select-tool drag here — this
+    // handler also fires on mouseLeave when the pointer slides onto a
+    // different page's canvas mid-drag, and clearing dragStart at that
+    // moment would kill the drag before it can continue onto the new page.
+    // The window-level effect below owns clearing it once the drag truly ends.
+    if (!(activeTool === "select" && selectedAnnotation)) {
+      setDragStart(null);
+    }
   };
+
+  // Cross-page drag: while moving or resizing a selected annotation with the
+  // select tool, track the pointer with window-level listeners instead of
+  // relying on the per-canvas handlers above. Each page renders its own
+  // canvas with its own local mouse handlers, so a per-canvas listener alone
+  // loses the drag the instant the pointer leaves that canvas — this lets a
+  // move continue seamlessly onto a different page's canvas, reassigning the
+  // annotation's page as it goes.
+  useEffect(() => {
+    if (activeTool !== "select" || !dragStart || !selectedAnnotation) return;
+
+    const findHit = (clientX: number, clientY: number) => {
+      for (const [pageNum, canvas] of annotationCanvasRefs.current.entries()) {
+        const rect = canvas.getBoundingClientRect();
+        if (
+          clientX >= rect.left &&
+          clientX <= rect.right &&
+          clientY >= rect.top &&
+          clientY <= rect.bottom
+        ) {
+          const cssWidth = parseFloat(canvas.style.width) || rect.width;
+          const cssHeight = parseFloat(canvas.style.height) || rect.height;
+          return {
+            page: pageNum,
+            x: (clientX - rect.left) * (cssWidth / rect.width),
+            y: (clientY - rect.top) * (cssHeight / rect.height),
+          };
+        }
+      }
+      return null;
+    };
+
+    const getPoint = (e: MouseEvent | TouchEvent) => {
+      if ("touches" in e) {
+        const t = e.touches[0] ?? e.changedTouches[0];
+        return t ? { clientX: t.clientX, clientY: t.clientY } : null;
+      }
+      return { clientX: e.clientX, clientY: e.clientY };
+    };
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      const point = getPoint(e);
+      if (!point) return;
+      const hit = findHit(point.clientX, point.clientY);
+      if (!hit) return; // pointer is between pages / off any canvas — hold last position
+
+      if ("touches" in e) e.preventDefault();
+
+      setAnnotations((prev) => {
+        const selectedAnn = prev.find((a) => a.id === selectedAnnotation);
+        if (!selectedAnn) return prev;
+
+        if (resizeHandle) {
+          // Resizing stays anchored to the annotation's current page.
+          if (hit.page !== selectedAnn.page) return prev;
+          let newX = selectedAnn.x;
+          let newY = selectedAnn.y;
+          let newWidth = selectedAnn.width;
+          let newHeight = selectedAnn.height;
+          const minSize = 20;
+
+          switch (resizeHandle) {
+            case "se":
+              newWidth = Math.max(minSize, hit.x - selectedAnn.x);
+              newHeight = Math.max(minSize, hit.y - selectedAnn.y);
+              break;
+            case "sw":
+              newWidth = Math.max(minSize, selectedAnn.x + selectedAnn.width - hit.x);
+              newHeight = Math.max(minSize, hit.y - selectedAnn.y);
+              newX = Math.min(hit.x, selectedAnn.x + selectedAnn.width - minSize);
+              break;
+            case "ne":
+              newWidth = Math.max(minSize, hit.x - selectedAnn.x);
+              newHeight = Math.max(minSize, selectedAnn.y + selectedAnn.height - hit.y);
+              newY = Math.min(hit.y, selectedAnn.y + selectedAnn.height - minSize);
+              break;
+            case "nw":
+              newWidth = Math.max(minSize, selectedAnn.x + selectedAnn.width - hit.x);
+              newHeight = Math.max(minSize, selectedAnn.y + selectedAnn.height - hit.y);
+              newX = Math.min(hit.x, selectedAnn.x + selectedAnn.width - minSize);
+              newY = Math.min(hit.y, selectedAnn.y + selectedAnn.height - minSize);
+              break;
+          }
+
+          return prev.map((a) =>
+            a.id === selectedAnnotation
+              ? { ...a, x: newX, y: newY, width: newWidth, height: newHeight }
+              : a
+          );
+        }
+
+        // Move — allowed to cross onto a different page.
+        activePageRef.current = hit.page;
+        if (currentPage !== hit.page) setCurrentPage(hit.page);
+        return prev.map((a) =>
+          a.id === selectedAnnotation
+            ? { ...a, page: hit.page, x: hit.x - dragOffset.x, y: hit.y - dragOffset.y }
+            : a
+        );
+      });
+    };
+
+    const handleUp = () => {
+      addToHistory(annotationsRef.current);
+      setDragStart(null);
+      setResizeHandle(null);
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool, dragStart, selectedAnnotation, resizeHandle, dragOffset]);
 
   // Handle text input change
   const handleTextInputChange = (value: string) => {
