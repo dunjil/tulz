@@ -304,6 +304,111 @@ const dateFormats = [
   { id: "MMMM DD, YYYY", example: "December 25, 2024" },
 ];
 
+type TooltipState = {
+  label: string;
+  top: number;
+  left: number;
+  placement: "right" | "bottom";
+} | null;
+type SetTooltip = React.Dispatch<React.SetStateAction<TooltipState>>;
+
+// Tool button with a portal-rendered hover tooltip. Hoisted to module scope
+// (not defined inside the page component) so its identity is stable across
+// renders — an inline component redefined every render gets a fresh type
+// each time, which makes React unmount/remount the DOM node on every parent
+// re-render (including the very re-render triggered by its own onMouseEnter),
+// detaching the button mid-click before the click event can fire.
+const ToolButton = ({
+  tool,
+  icon,
+  label,
+  active,
+  onClick,
+  setTooltip,
+}: {
+  tool: Tool;
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  setTooltip: SetTooltip;
+}) => {
+  const showTooltip = (e: React.SyntheticEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      label,
+      top: rect.top + rect.height / 2,
+      left: rect.right + 8,
+      placement: "right",
+    });
+  };
+  const hideTooltip = () => setTooltip((t) => (t?.label === label ? null : t));
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={showTooltip}
+      onMouseLeave={hideTooltip}
+      onFocus={showTooltip}
+      onBlur={hideTooltip}
+      className={cn(
+        "flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-lg transition-all",
+        active
+          ? "bg-primary text-primary-foreground shadow-md"
+          : "hover:bg-muted text-muted-foreground hover:text-foreground"
+      )}
+      aria-label={label}
+    >
+      {icon}
+    </button>
+  );
+};
+
+// Small reusable icon button with a portal-rendered hover tooltip. Hoisted to
+// module scope for the same reason as ToolButton above.
+const IconTooltipButton = ({
+  label,
+  onClick,
+  disabled,
+  className,
+  children,
+  setTooltip,
+}: {
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+  children: React.ReactNode;
+  setTooltip: SetTooltip;
+}) => {
+  const showTooltip = (e: React.SyntheticEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      label,
+      top: rect.bottom + 6,
+      left: rect.left + rect.width / 2,
+      placement: "bottom",
+    });
+  };
+  const hideTooltip = () => setTooltip((t) => (t?.label === label ? null : t));
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={className}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={showTooltip}
+      onMouseLeave={hideTooltip}
+      onFocus={showTooltip}
+      onBlur={hideTooltip}
+    >
+      {children}
+    </Button>
+  );
+};
+
 export default function PDFFillerPage() {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -2718,51 +2823,6 @@ export default function PDFFillerPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [editingText, selectedAnnotation, historyIndex, history.length]);
 
-  // Tool button with a lightweight CSS-only hover tooltip (no extra deps)
-  const ToolButton = ({
-    tool,
-    icon,
-    label,
-    active,
-    onClick,
-  }: {
-    tool: Tool;
-    icon: React.ReactNode;
-    label: string;
-    active: boolean;
-    onClick: () => void;
-  }) => {
-    const showTooltip = (e: React.SyntheticEvent<HTMLButtonElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTooltip({
-        label,
-        top: rect.top + rect.height / 2,
-        left: rect.right + 8,
-        placement: "right",
-      });
-    };
-    const hideTooltip = () => setTooltip((t) => (t?.label === label ? null : t));
-
-    return (
-      <button
-        onClick={onClick}
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-        onFocus={showTooltip}
-        onBlur={hideTooltip}
-        className={cn(
-          "flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-lg transition-all",
-          active
-            ? "bg-primary text-primary-foreground shadow-md"
-            : "hover:bg-muted text-muted-foreground hover:text-foreground"
-        )}
-        aria-label={label}
-      >
-        {icon}
-      </button>
-    );
-  };
-
   // Get editing text annotation position, relative to that annotation's own
   // page wrapper (the textarea is rendered nested inside that page's div).
   // Uses the canvas's own CSS dimensions instead of internal canvas dimensions.
@@ -2791,49 +2851,6 @@ export default function PDFFillerPage() {
   const handleExport = () => {
     if (!selectedFile) return;
     fillMutation.mutate();
-  };
-
-  // Small reusable icon button with a portal-rendered hover tooltip, used in
-  // the header and the floating zoom/page bar.
-  const IconTooltipButton = ({
-    label,
-    onClick,
-    disabled,
-    className,
-    children,
-  }: {
-    label: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    className?: string;
-    children: React.ReactNode;
-  }) => {
-    const showTooltip = (e: React.SyntheticEvent<HTMLButtonElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTooltip({
-        label,
-        top: rect.bottom + 6,
-        left: rect.left + rect.width / 2,
-        placement: "bottom",
-      });
-    };
-    const hideTooltip = () => setTooltip((t) => (t?.label === label ? null : t));
-
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className={className}
-        onClick={onClick}
-        disabled={disabled}
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-        onFocus={showTooltip}
-        onBlur={hideTooltip}
-      >
-        {children}
-      </Button>
-    );
   };
 
   // ---------------------------------------------------------------------
@@ -3653,7 +3670,7 @@ export default function PDFFillerPage() {
                 </div>
                 
                 <div className="flex items-center gap-1 border-r pr-2 mr-2">
-                  <IconTooltipButton
+                  <IconTooltipButton setTooltip={setTooltip}
                     label="Undo"
                     className="h-8 w-8"
                     onClick={handleUndo}
@@ -3661,7 +3678,7 @@ export default function PDFFillerPage() {
                   >
                     <Undo2 className="h-4 w-4" />
                   </IconTooltipButton>
-                  <IconTooltipButton
+                  <IconTooltipButton setTooltip={setTooltip}
                     label="Redo"
                     className="h-8 w-8"
                     onClick={handleRedo}
@@ -3695,7 +3712,7 @@ export default function PDFFillerPage() {
               </>
             )}
 
-            <IconTooltipButton
+            <IconTooltipButton setTooltip={setTooltip}
               label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
               className="h-8 w-8"
               onClick={toggleFullscreen}
@@ -3716,14 +3733,14 @@ export default function PDFFillerPage() {
             isFullscreen && "h-full"
           )}>
             <div className="flex flex-col items-center gap-2 px-2">
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="select"
                 icon={<MousePointer className="h-5 w-5" />}
                 label="Select"
                 active={activeTool === "select"}
                 onClick={() => setActiveTool("select")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="text"
                 icon={<Type className="h-5 w-5" />}
                 label="Text"
@@ -3731,14 +3748,14 @@ export default function PDFFillerPage() {
                 onClick={() => setActiveTool("text")}
               />
               <div className="w-full h-px bg-border my-1" />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="draw"
                 icon={<Pencil className="h-5 w-5" />}
                 label="Draw"
                 active={activeTool === "draw"}
                 onClick={() => setActiveTool("draw")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="highlight"
                 icon={<Highlighter className="h-5 w-5" />}
                 label="Highlight"
@@ -3746,7 +3763,7 @@ export default function PDFFillerPage() {
                 onClick={() => setActiveTool("highlight")}
               />
               <div className="w-full h-px bg-border my-1" />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="signature"
                 icon={<FileSignature className="h-5 w-5" />}
                 label="Signature"
@@ -3756,7 +3773,7 @@ export default function PDFFillerPage() {
                   if (!signatureData) setShowSignatureModal(true);
                 }}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="initials"
                 icon={<Droplets className="h-5 w-5" />}
                 label="Initials"
@@ -3766,7 +3783,7 @@ export default function PDFFillerPage() {
                   if (!initialsData) setShowInitialsModal(true);
                 }}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="signedStamp"
                 icon={<Stamp className="h-5 w-5" />}
                 label="Signed Stamp"
@@ -3778,7 +3795,7 @@ export default function PDFFillerPage() {
                   setShowSignedStampModal(true);
                 }}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="date"
                 icon={<Calendar className="h-5 w-5" />}
                 label="Date"
@@ -3791,21 +3808,24 @@ export default function PDFFillerPage() {
                 }}
               />
               <div className="w-full h-px bg-border my-1" />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="image"
                 icon={<ImageIcon className="h-5 w-5" />}
                 label="Image"
                 active={activeTool === "image"}
-                onClick={() => setActiveTool("image")}
+                onClick={() => {
+                  setActiveTool("image");
+                  imageInputRef.current?.click();
+                }}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="checkbox"
                 icon={<Check className="h-5 w-5" />}
                 label="Checkbox"
                 active={activeTool === "checkbox"}
                 onClick={() => setActiveTool("checkbox")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="radio"
                 icon={<Circle className="h-5 w-5" />}
                 label="Radio"
@@ -3813,21 +3833,21 @@ export default function PDFFillerPage() {
                 onClick={() => setActiveTool("radio")}
               />
               <div className="w-full h-px bg-border my-1" />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="rectangle"
                 icon={<Square className="h-5 w-5" />}
                 label="Rectangle"
                 active={activeTool === "rectangle"}
                 onClick={() => setActiveTool("rectangle")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="circle"
                 icon={<Circle className="h-5 w-5" />}
                 label="Circle"
                 active={activeTool === "circle"}
                 onClick={() => setActiveTool("circle")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="line"
                 icon={<Minus className="h-5 w-5" />}
                 label="Line"
@@ -3835,14 +3855,14 @@ export default function PDFFillerPage() {
                 onClick={() => setActiveTool("line")}
               />
               <div className="w-full h-px bg-border my-1" />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="strikethrough"
                 icon={<PenTool className="h-5 w-5" />}
                 label="Redact"
                 active={activeTool === "strikethrough"}
                 onClick={() => setActiveTool("strikethrough")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="eraser"
                 icon={<Eraser className="h-5 w-5" />}
                 label="Eraser"
@@ -3850,14 +3870,14 @@ export default function PDFFillerPage() {
                 onClick={() => setActiveTool("eraser")}
               />
               <div className="w-full h-px bg-border my-1" />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="stamp"
                 icon={<Stamp className="h-5 w-5" />}
                 label="Stamp"
                 active={activeTool === "stamp"}
                 onClick={() => setActiveTool("stamp")}
               />
-              <ToolButton
+              <ToolButton setTooltip={setTooltip}
                 tool="watermark"
                 icon={<Layers className="h-5 w-5" />}
                 label="Watermark"
@@ -3879,23 +3899,23 @@ export default function PDFFillerPage() {
           {selectedFile && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-background/90 shadow-lg rounded-full border backdrop-blur">
               <div className="flex items-center gap-1 border-r pr-2">
-                <IconTooltipButton label="Zoom out" className="h-8 w-8 rounded-full" onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}>
+                <IconTooltipButton setTooltip={setTooltip} label="Zoom out" className="h-8 w-8 rounded-full" onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}>
                   <ZoomOut className="h-4 w-4" />
                 </IconTooltipButton>
                 <span className="text-xs font-medium w-12 text-center">{Math.round(zoom * 100)}%</span>
-                <IconTooltipButton label="Zoom in" className="h-8 w-8 rounded-full" onClick={() => setZoom(Math.min(2, zoom + 0.1))}>
+                <IconTooltipButton setTooltip={setTooltip} label="Zoom in" className="h-8 w-8 rounded-full" onClick={() => setZoom(Math.min(2, zoom + 0.1))}>
                   <ZoomIn className="h-4 w-4" />
                 </IconTooltipButton>
-                <IconTooltipButton label="Fit to width" className="h-8 w-8 rounded-full hidden md:flex" onClick={handleFitToWidth}>
+                <IconTooltipButton setTooltip={setTooltip} label="Fit to width" className="h-8 w-8 rounded-full hidden md:flex" onClick={handleFitToWidth}>
                    <Maximize className="h-4 w-4" />
                 </IconTooltipButton>
               </div>
               <div className="flex items-center gap-1">
-                <IconTooltipButton label="Previous page" className="h-8 w-8 rounded-full" onClick={() => scrollToPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
+                <IconTooltipButton setTooltip={setTooltip} label="Previous page" className="h-8 w-8 rounded-full" onClick={() => scrollToPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
                   <ChevronLeft className="h-4 w-4" />
                 </IconTooltipButton>
                 <span className="text-xs font-medium whitespace-nowrap">Page {currentPage} / {totalPages}</span>
-                <IconTooltipButton label="Next page" className="h-8 w-8 rounded-full" onClick={() => scrollToPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>
+                <IconTooltipButton setTooltip={setTooltip} label="Next page" className="h-8 w-8 rounded-full" onClick={() => scrollToPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>
                   <ChevronRight className="h-4 w-4" />
                 </IconTooltipButton>
               </div>
@@ -4214,13 +4234,6 @@ export default function PDFFillerPage() {
 
             {activeTool === "image" && (
               <div className="space-y-2">
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
                 <Button size="sm" variant="outline" onClick={() => imageInputRef.current?.click()} className="w-full">
                   <ImageIcon className="h-4 w-4 mr-2" />
                   Upload Image
@@ -4243,6 +4256,17 @@ export default function PDFFillerPage() {
           </div>
         )}
       </div>
+
+      {/* Hidden image upload input — always mounted (not gated on activeTool)
+          so imageInputRef.current is never null when the Image tool icon is
+          clicked, since setActiveTool() re-renders asynchronously. */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
 
       {/* Modals */}
       <SignatureModal />
