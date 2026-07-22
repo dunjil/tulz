@@ -3751,28 +3751,44 @@ export default function PDFFillerPage() {
                 icon={<FileSignature className="h-5 w-5" />}
                 label="Signature"
                 active={activeTool === "signature"}
-                onClick={() => setActiveTool("signature")}
+                onClick={() => {
+                  setActiveTool("signature");
+                  if (!signatureData) setShowSignatureModal(true);
+                }}
               />
               <ToolButton
                 tool="initials"
                 icon={<Droplets className="h-5 w-5" />}
                 label="Initials"
                 active={activeTool === "initials"}
-                onClick={() => setActiveTool("initials")}
+                onClick={() => {
+                  setActiveTool("initials");
+                  if (!initialsData) setShowInitialsModal(true);
+                }}
               />
               <ToolButton
                 tool="signedStamp"
                 icon={<Stamp className="h-5 w-5" />}
                 label="Signed Stamp"
                 active={activeTool === "signedStamp"}
-                onClick={() => setActiveTool("signedStamp")}
+                onClick={() => {
+                  setActiveTool("signedStamp");
+                  const size = pageSizes[currentPage] ?? canvasSize;
+                  setSignedStampPosition({ x: size.width / 2, y: size.height / 2 });
+                  setShowSignedStampModal(true);
+                }}
               />
               <ToolButton
                 tool="date"
                 icon={<Calendar className="h-5 w-5" />}
                 label="Date"
                 active={activeTool === "date"}
-                onClick={() => setActiveTool("date")}
+                onClick={() => {
+                  setActiveTool("date");
+                  const size = pageSizes[currentPage] ?? canvasSize;
+                  setDatePosition({ x: size.width / 2, y: size.height / 2 });
+                  setShowDateModal(true);
+                }}
               />
               <div className="w-full h-px bg-border my-1" />
               <ToolButton
@@ -3846,7 +3862,12 @@ export default function PDFFillerPage() {
                 icon={<Layers className="h-5 w-5" />}
                 label="Watermark"
                 active={activeTool === "watermark"}
-                onClick={() => setActiveTool("watermark")}
+                onClick={() => {
+                  setActiveTool("watermark");
+                  const size = pageSizes[currentPage] ?? canvasSize;
+                  setWatermarkPosition({ x: size.width / 2, y: size.height / 2 });
+                  setShowWatermarkModal(true);
+                }}
               />
             </div>
           </div>
