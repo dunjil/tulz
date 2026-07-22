@@ -3,6 +3,7 @@
 import { RelatedGuide } from "@/components/shared/related-guide";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api, apiHelpers, shouldShowErrorToast } from "@/lib/api";
@@ -360,6 +361,16 @@ export default function PDFFillerPage() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Portal-rendered tooltip for toolbar icon buttons. Rendered into document.body
+  // so it isn't clipped by ancestor containers that set overflow-x/y-auto
+  // (setting overflow on one axis forces the browser to clip the other axis too).
+  const [tooltip, setTooltip] = useState<{
+    label: string;
+    top: number;
+    left: number;
+    placement: "right" | "bottom";
+  } | null>(null);
 
   // Toggle fullscreen mode
   const toggleFullscreen = () => {
@@ -2720,10 +2731,25 @@ export default function PDFFillerPage() {
     label: string;
     active: boolean;
     onClick: () => void;
-  }) => (
-    <div className="relative group">
+  }) => {
+    const showTooltip = (e: React.SyntheticEvent<HTMLButtonElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTooltip({
+        label,
+        top: rect.top + rect.height / 2,
+        left: rect.right + 8,
+        placement: "right",
+      });
+    };
+    const hideTooltip = () => setTooltip((t) => (t?.label === label ? null : t));
+
+    return (
       <button
         onClick={onClick}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={hideTooltip}
         className={cn(
           "flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-lg transition-all",
           active
@@ -2734,17 +2760,8 @@ export default function PDFFillerPage() {
       >
         {icon}
       </button>
-      <span
-        className={cn(
-          "pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-[80]",
-          "whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md",
-          "opacity-0 scale-95 transition-all duration-100 group-hover:opacity-100 group-hover:scale-100"
-        )}
-      >
-        {label}
-      </span>
-    </div>
-  );
+    );
+  };
 
   // Get editing text annotation position, relative to that annotation's own
   // page wrapper (the textarea is rendered nested inside that page's div).
@@ -2776,8 +2793,8 @@ export default function PDFFillerPage() {
     fillMutation.mutate();
   };
 
-  // Small reusable icon button with a CSS-only hover tooltip, used in the
-  // header and the floating zoom/page bar.
+  // Small reusable icon button with a portal-rendered hover tooltip, used in
+  // the header and the floating zoom/page bar.
   const IconTooltipButton = ({
     label,
     onClick,
@@ -2790,28 +2807,34 @@ export default function PDFFillerPage() {
     disabled?: boolean;
     className?: string;
     children: React.ReactNode;
-  }) => (
-    <div className="relative group inline-flex">
+  }) => {
+    const showTooltip = (e: React.SyntheticEvent<HTMLButtonElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTooltip({
+        label,
+        top: rect.bottom + 6,
+        left: rect.left + rect.width / 2,
+        placement: "bottom",
+      });
+    };
+    const hideTooltip = () => setTooltip((t) => (t?.label === label ? null : t));
+
+    return (
       <Button
         variant="ghost"
         size="icon"
         className={className}
         onClick={onClick}
         disabled={disabled}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={hideTooltip}
       >
         {children}
       </Button>
-      <span
-        className={cn(
-          "pointer-events-none absolute left-1/2 top-full -translate-x-1/2 mt-1.5 z-[80]",
-          "whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md",
-          "opacity-0 scale-95 transition-all duration-100 group-hover:opacity-100 group-hover:scale-100"
-        )}
-      >
-        {label}
-      </span>
-    </div>
-  );
+    );
+  };
 
   // ---------------------------------------------------------------------
   // Modal components (each gated on its own showXModal flag)
@@ -4207,6 +4230,27 @@ export default function PDFFillerPage() {
       <StampModal />
       <SignedStampModal />
       <WatermarkModal />
+
+      {/* Toolbar tooltip, rendered via portal so it can't be clipped by any
+          ancestor's overflow-x/y-auto (e.g. the tool sidebar or header bar). */}
+      {tooltip &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[9999] whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md"
+            style={{
+              top: tooltip.top,
+              left: tooltip.left,
+              transform:
+                tooltip.placement === "right"
+                  ? "translateY(-50%)"
+                  : "translateX(-50%)",
+            }}
+          >
+            {tooltip.label}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
